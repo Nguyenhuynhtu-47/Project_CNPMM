@@ -3,11 +3,11 @@ const router = express.Router();
 
 const authController = require('../controllers/authController');
 
-const { registerLimiter, loginLimiter, passwordResetLimiter } = require('../middlewares/rateLimitMiddleware');
+const { registerLimiter, loginLimiter, passwordResetLimiter } = require('../middleware/rateLimitMiddleware');
 
 const { registerValidation, loginValidation, forgotPasswordValidation, resetPasswordValidation } = require('../validators/authValidator');
 
-const { authenticateToken, authorizeRoles } = require('../middlewares/authMiddleware');
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 
 router.post('/register', registerLimiter, registerValidation, authController.register);
 

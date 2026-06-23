@@ -2,7 +2,7 @@ const { validationResult } =
     require("express-validator");
 
 const profileService =
-    require("../services/profileService");
+    require("../service/profileService");
 
 const updateProfile = async (
     req,
@@ -23,7 +23,7 @@ const updateProfile = async (
 
         const updatedUser =
             await profileService.updateProfile(
-                req.user.id,
+                req.user._id,
                 req.body
             );
 

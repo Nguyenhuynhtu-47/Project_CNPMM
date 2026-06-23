@@ -17,6 +17,12 @@ const registerValidation = [
             'Mật khẩu phải từ 6 ký tự trở lên'
         ),
 
+    body('confirmPassword')
+        .custom((value, { req }) => value === req.body.password)
+        .withMessage(
+            'Mật khẩu xác nhận không khớp'
+        ),
+
     validate
 ];
 

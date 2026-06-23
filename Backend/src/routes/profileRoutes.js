@@ -6,9 +6,9 @@ const profileController = require('../controllers/profileController');
 
 const { updateProfileValidator } = require('../validators/profileValidator');
 
-const { authenticateToken } = require('../middlewares/authMiddleware');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
-const { profileUpdateLimiter } = require('../middlewares/rateLimitMiddleware');
+const { profileUpdateLimiter } = require('../middleware/rateLimitMiddleware');
 
 router.put('/profile', profileUpdateLimiter, authenticateToken, updateProfileValidator, profileController.updateProfile);
 
