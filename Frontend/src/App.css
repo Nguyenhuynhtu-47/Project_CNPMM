@@ -1,23 +1,24 @@
 :root {
-  --bg: #07111f;
-  --panel: rgba(10, 20, 36, 0.86);
-  --line: rgba(255, 255, 255, 0.08);
-  --text: #d9e4f2;
-  --muted: #8ea1ba;
-  --brand: #41d2ff;
-  --brand-strong: #6a7cff;
-  --accent: #ffb84d;
-  --shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+  --bg: #f5f8ff;
+  --panel: rgba(255, 255, 255, 0.92);
+  --line: rgba(30, 64, 175, 0.12);
+  --text: #14213d;
+  --muted: #64748b;
+  --brand: #2563eb;
+  --brand-strong: #14b8a6;
+  --accent: #f59e0b;
+  --shadow: 0 20px 60px rgba(37, 99, 235, 0.12);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   color: var(--text);
+  overflow-x: hidden;
   background:
-    radial-gradient(circle at top left, rgba(65, 210, 255, 0.16), transparent 28%),
-    radial-gradient(circle at top right, rgba(106, 124, 255, 0.18), transparent 34%),
-    linear-gradient(180deg, #040814 0%, #07111f 38%, #0a1322 100%);
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 30%),
+    radial-gradient(circle at top right, rgba(20, 184, 166, 0.12), transparent 34%),
+    linear-gradient(180deg, #ffffff 0%, #f5f8ff 42%, #eef5ff 100%);
 }
 
 a {
@@ -31,6 +32,7 @@ a {
 
 .app-shell {
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .app-content {
@@ -44,15 +46,16 @@ a {
   top: 0;
   z-index: 50;
   backdrop-filter: blur(18px);
-  background: rgba(5, 10, 18, 0.74);
+  background: rgba(255, 255, 255, 0.84);
   border-bottom: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
 }
 
 .app-brand {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  color: #fff;
+  color: var(--text);
   font-weight: 800;
   letter-spacing: 0.02em;
 }
@@ -68,7 +71,7 @@ a {
   background: linear-gradient(135deg, var(--brand), var(--brand-strong));
   color: #fff;
   font-weight: 800;
-  box-shadow: 0 12px 28px rgba(65, 210, 255, 0.25);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.22);
 }
 
 .app-brand__mark {
@@ -81,8 +84,8 @@ a {
   align-items: center;
   gap: 12px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text);
   border-radius: 999px;
   padding: 10px 14px;
   transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
@@ -90,8 +93,9 @@ a {
 
 .account-trigger:hover {
   transform: translateY(-1px);
-  border-color: rgba(65, 210, 255, 0.4);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(37, 99, 235, 0.32);
+  background: #fff;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.12);
 }
 
 .account-avatar {
@@ -103,15 +107,17 @@ a {
 .account-menu {
   width: 260px;
   border: 1px solid var(--line);
-  background: rgba(8, 14, 26, 0.98);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.14);
 }
 
 .account-menu .dropdown-item {
-  color: #e6eef9;
+  color: var(--text);
 }
 
 .account-menu .dropdown-item:hover {
-  background: rgba(65, 210, 255, 0.1);
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--brand);
 }
 
 .dropdown-header {
@@ -129,9 +135,9 @@ a {
 }
 
 .nav-cta__pill--accent {
-  color: #fff;
-  border-color: rgba(65, 210, 255, 0.25);
-  background: rgba(65, 210, 255, 0.08);
+  color: var(--brand);
+  border-color: rgba(37, 99, 235, 0.18);
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .auth-shell {
@@ -148,7 +154,7 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  color: #fff;
+  color: var(--text);
 }
 
 .brand-badge {
@@ -163,7 +169,7 @@ a {
 .profile-header h1,
 .auth-copy-panel h1,
 .auth-form-card h2 {
-  color: #fff;
+  color: var(--text);
 }
 
 .brand-mark span,
@@ -209,38 +215,38 @@ a {
   justify-content: center;
   min-height: 640px;
   background:
-    radial-gradient(circle at top right, rgba(255, 184, 77, 0.16), transparent 30%),
-    linear-gradient(160deg, rgba(15, 28, 49, 0.96), rgba(8, 16, 30, 0.88));
+    radial-gradient(circle at top right, rgba(20, 184, 166, 0.16), transparent 30%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.9));
 }
 
 .auth-copy-panel--login {
   background:
-    radial-gradient(circle at top right, rgba(65, 210, 255, 0.16), transparent 30%),
-    linear-gradient(160deg, rgba(12, 23, 40, 0.96), rgba(8, 16, 30, 0.88));
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.14), transparent 30%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.9));
 }
 
 .auth-copy-panel--register {
   background:
-    radial-gradient(circle at top right, rgba(255, 184, 77, 0.18), transparent 30%),
-    linear-gradient(160deg, rgba(20, 23, 39, 0.96), rgba(8, 16, 30, 0.88));
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.16), transparent 30%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 235, 0.85));
 }
 
 .auth-copy-panel--verify {
   background:
-    radial-gradient(circle at top right, rgba(106, 124, 255, 0.18), transparent 30%),
-    linear-gradient(160deg, rgba(17, 20, 43, 0.96), rgba(8, 16, 30, 0.88));
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.14), transparent 30%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(238, 242, 255, 0.88));
 }
 
 .auth-copy-panel--forgot {
   background:
-    radial-gradient(circle at top right, rgba(255, 184, 77, 0.16), transparent 30%),
-    linear-gradient(160deg, rgba(13, 21, 41, 0.96), rgba(8, 16, 30, 0.88));
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.14), transparent 30%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 235, 0.86));
 }
 
 .auth-copy-panel--reset {
   background:
-    radial-gradient(circle at top right, rgba(65, 210, 255, 0.16), transparent 30%),
-    linear-gradient(160deg, rgba(14, 19, 41, 0.96), rgba(8, 16, 30, 0.88));
+    radial-gradient(circle at top right, rgba(20, 184, 166, 0.14), transparent 30%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(240, 253, 250, 0.86));
 }
 
 .auth-form-panel {
@@ -267,24 +273,24 @@ a {
   display: grid;
   gap: 8px;
   font-size: 0.95rem;
-  color: #f4f7fb;
+  color: var(--text);
 }
 
 .field-label .form-control {
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
+  border: 1px solid rgba(30, 64, 175, 0.14);
+  background: #fff;
+  color: var(--text);
   padding: 0.95rem 1rem;
 }
 
 .field-label .form-control:focus {
-  border-color: rgba(65, 210, 255, 0.5);
-  box-shadow: 0 0 0 0.25rem rgba(65, 210, 255, 0.12);
+  border-color: rgba(37, 99, 235, 0.42);
+  box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.12);
 }
 
 .field-label .form-control::placeholder {
-  color: rgba(234, 242, 255, 0.48);
+  color: rgba(100, 116, 139, 0.72);
 }
 
 .password-field {
@@ -301,8 +307,8 @@ a {
   top: 50%;
   transform: translateY(-50%);
   border: 0;
-  background: rgba(65, 210, 255, 0.12);
-  color: #fff;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--brand);
   border-radius: 999px;
   width: 2.35rem;
   height: 2.35rem;
@@ -312,14 +318,14 @@ a {
 }
 
 .password-toggle:hover {
-  background: rgba(65, 210, 255, 0.22);
+  background: rgba(37, 99, 235, 0.18);
 }
 
 .auth-primary-btn {
   border: 0;
   border-radius: 16px;
   background: linear-gradient(135deg, var(--brand), var(--brand-strong));
-  box-shadow: 0 14px 30px rgba(65, 210, 255, 0.24);
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.22);
 }
 
 .auth-links {
@@ -328,15 +334,15 @@ a {
   gap: 16px;
   flex-wrap: wrap;
   margin-top: 10px;
-  color: #fff;
+  color: var(--text);
 }
 
 .auth-links a {
-  color: #d9e4f2;
+  color: var(--brand);
 }
 
 .auth-links a:hover {
-  color: #fff;
+  color: #1d4ed8;
 }
 
 .eyebrow {
@@ -344,8 +350,8 @@ a {
   align-items: center;
   gap: 8px;
   width: fit-content;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--brand);
+  background: rgba(37, 99, 235, 0.08);
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 6px 12px;
@@ -366,19 +372,20 @@ a {
   gap: 3px;
   padding: 16px 18px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(248, 250, 252, 0.9);
   border: 1px solid var(--line);
 }
 
 .feature-stack strong,
 .profile-info-list strong {
-  color: #fff;
+  color: var(--text);
 }
 
 .dashboard-page,
 .profile-page {
   display: grid;
   gap: 24px;
+  min-width: 0;
 }
 
 .hero-banner {
@@ -387,8 +394,8 @@ a {
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
   gap: 20px;
   background:
-    radial-gradient(circle at top right, rgba(65, 210, 255, 0.12), transparent 30%),
-    linear-gradient(150deg, rgba(13, 23, 41, 0.98), rgba(8, 14, 28, 0.92));
+    radial-gradient(circle at top right, rgba(20, 184, 166, 0.14), transparent 30%),
+    linear-gradient(150deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.92));
 }
 
 .hero-banner h1 {
@@ -413,17 +420,22 @@ a {
   padding: 22px;
   display: grid;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.86);
 }
 
 .stat-card strong {
-  color: #fff;
+  color: var(--text);
   font-size: 1.8rem;
 }
 
 .section-block {
   display: grid;
   gap: 16px;
+  min-width: 0;
+}
+
+#courses {
+  min-width: 0;
 }
 
 .section-heading {
@@ -452,12 +464,98 @@ a {
   padding: 22px;
   display: grid;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.course-slider {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding-bottom: 34px;
+}
+
+.course-slider .swiper-wrapper,
+.course-slider .swiper-slide {
+  min-width: 0;
+}
+
+.course-slider .swiper-slide {
+  height: auto;
+}
+
+.course-slider .course-card {
+  height: 100%;
+}
+
+.course-slider .course-image {
+  height: 190px;
+  aspect-ratio: auto;
+}
+
+.course-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(20, 184, 166, 0.14));
+}
+
+.course-image--placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--brand);
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.course-detail-image {
+  width: 100%;
+  max-height: 380px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(20, 184, 166, 0.14));
+}
+
+.admin-course-image {
+  width: 68px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex: 0 0 auto;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(20, 184, 166, 0.14));
+}
+
+.list-card {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.list-card__image {
+  width: 100%;
+  height: 100%;
+  min-height: 150px;
+  object-fit: cover;
+  border-radius: 0;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(20, 184, 166, 0.14));
+}
+
+.pagination-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
 }
 
 .course-card h3,
 .profile-card h2 {
-  color: #fff;
+  color: var(--text);
   margin: 0;
 }
 
@@ -465,8 +563,8 @@ a {
   width: fit-content;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(65, 210, 255, 0.12);
-  color: #b2f0ff;
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--brand);
   font-size: 0.85rem;
 }
 
@@ -502,7 +600,7 @@ a {
 }
 
 .profile-card--info {
-  background: linear-gradient(160deg, rgba(65, 210, 255, 0.08), rgba(255, 255, 255, 0.03));
+  background: linear-gradient(160deg, rgba(37, 99, 235, 0.08), rgba(255, 255, 255, 0.88));
 }
 
 .profile-info-list {
@@ -521,6 +619,110 @@ a {
 
 .letter-spacing {
   letter-spacing: 0.32em;
+}
+
+.card,
+.modal-content,
+.list-group-item,
+.dropdown-menu {
+  border-color: var(--line);
+  background-color: rgba(255, 255, 255, 0.94);
+  color: var(--text);
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+}
+
+.card {
+  border-radius: 12px;
+}
+
+.table {
+  color: var(--text);
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--text);
+  --bs-table-border-color: rgba(30, 64, 175, 0.1);
+  --bs-table-striped-bg: rgba(248, 250, 252, 0.84);
+}
+
+.form-control,
+.form-select {
+  border-color: rgba(30, 64, 175, 0.16);
+  color: var(--text);
+  background-color: #fff;
+  border-radius: 10px;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: rgba(37, 99, 235, 0.42);
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.12);
+}
+
+.btn {
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.btn-primary,
+.list-group-item.active {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--brand), #3b82f6);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+}
+
+.btn-outline-primary {
+  border-color: rgba(37, 99, 235, 0.36);
+  color: var(--brand);
+}
+
+.btn-outline-primary:hover {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: var(--brand);
+  color: #1d4ed8;
+}
+
+.btn-light,
+.btn-outline-secondary {
+  border-color: rgba(100, 116, 139, 0.18);
+  background: #f8fafc;
+  color: var(--text);
+}
+
+.btn-outline-danger {
+  border-color: rgba(220, 38, 38, 0.28);
+  color: #dc2626;
+}
+
+.btn-outline-danger:hover {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.alert {
+  border-radius: 12px;
+  border-width: 1px;
+}
+
+.badge.text-bg-light {
+  color: var(--text) !important;
+  background-color: #eef2ff !important;
+}
+
+.progress {
+  background-color: #e2e8f0;
+}
+
+.progress-bar {
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+}
+
+.dropdown-divider {
+  border-color: rgba(30, 64, 175, 0.12);
+}
+
+.navbar-dark .navbar-brand,
+.navbar-dark .navbar-nav .nav-link {
+  color: var(--text);
 }
 
 @media (max-width: 992px) {
@@ -549,6 +751,14 @@ a {
   .course-card,
   .profile-card {
     padding: 20px;
+  }
+
+  .list-card {
+    grid-template-columns: 1fr;
+  }
+
+  .list-card__image {
+    min-height: 180px;
   }
 
   .hero-banner h1 {

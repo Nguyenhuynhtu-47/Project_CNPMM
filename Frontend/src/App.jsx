@@ -1,31 +1,49 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import ProtectedLayout from './layouts/ProtectedLayout';
 import PublicLayout from './layouts/PublicLayout';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import VerifyOtp from './pages/VerifyOtp';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Profile from './pages/Profile';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './App.css';
+
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const VerifyOtp = lazy(() => import('./pages/VerifyOtp'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Courses = lazy(() => import('./pages/Courses'));
+const CourseDetail = lazy(() => import('./pages/CourseDetail'));
+const QuizList = lazy(() => import('./pages/QuizList'));
+const QuizTake = lazy(() => import('./pages/QuizTake'));
+const Notifications = lazy(() => import('./components/Notifications'));
+const Enrollments = lazy(() => import('./pages/Enrollments'));
+const StudentLearning = lazy(() => import('./pages/StudentLearning'));
+const Orders = lazy(() => import('./pages/Orders'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminManagement = lazy(() => import('./pages/AdminManagement'));
+const TeacherDashboard = lazy(() => import('./pages/TeacherDashboard'));
+const ManagerDashboard = lazy(() => import('./pages/ManagerDashboard'));
 
 const RootRedirect = () => {
   const token = localStorage.getItem('token');
   return <Navigate to={token ? '/home' : '/login'} replace />;
 };
 
+const PageFallback = () => <div className="container py-5">Loading page...</div>;
+
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
-          <Route path="/" element={<RootRedirect />} />
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            <Route path="/" element={<RootRedirect />} />
 
           <Route
             path="/login"
@@ -94,6 +112,149 @@ function App() {
           />
 
           <Route
+            path="/courses"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Courses />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/courses/:id"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <CourseDetail />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/courses/:id/quizzes"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <QuizList />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/quizzes/:id"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <QuizTake />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Notifications />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Dashboard />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/enrollments"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Enrollments />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/my-learning"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <StudentLearning />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/orders"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <Orders />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute roles={['ADMIN']}>
+                <ProtectedLayout>
+                  <AdminDashboard />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/manage"
+            element={
+              <ProtectedRoute roles={['ADMIN']}>
+                <ProtectedLayout>
+                  <AdminManagement />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/teacher"
+            element={
+              <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
+                <ProtectedLayout>
+                  <TeacherDashboard />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/manager"
+            element={
+              <ProtectedRoute roles={['MANAGER', 'ADMIN']}>
+                <ProtectedLayout>
+                  <ManagerDashboard />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/profile"
             element={
               <ProtectedRoute>
@@ -105,7 +266,8 @@ function App() {
           />
 
           <Route path="*" element={<RootRedirect />} />
-        </Routes>
+          </Routes>
+        </Suspense>
       </Router>
     </AuthProvider>
   );

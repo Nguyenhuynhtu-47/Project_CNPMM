@@ -18,8 +18,10 @@ router.post('/verify-otp', authController.verifyOtp);
 router.post('/forgot-password', passwordResetLimiter, forgotPasswordValidation, authController.forgotPassword);
 
 router.post('/reset-password', passwordResetLimiter, resetPasswordValidation, authController.resetPassword);
+router.post('/refresh-token', authController.refreshToken);
+router.post('/logout', authController.logout);
 
-router.get('/user/profile', authenticateToken, authorizeRoles('USER'), authController.getProfile);
+router.get('/user/profile', authenticateToken, authController.getProfile);
 
 router.get('/admin/profile', authenticateToken, authorizeRoles('ADMIN'), authController.getProfile);
 

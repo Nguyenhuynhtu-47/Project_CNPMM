@@ -1,16 +1,41 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { logout as logoutService } from '../services/auth';
+
+const menuItems = [
+    { label: 'Home', to: '/home' },
+    { label: 'Courses', to: '/courses' },
+    { label: 'Orders', to: '/orders', roles: ['STUDENT', 'USER', 'ADMIN'] },
+    { label: 'Enrollments', to: '/enrollments', roles: ['STUDENT', 'USER', 'ADMIN'] },
+    { label: 'My learning', to: '/my-learning', roles: ['STUDENT', 'USER', 'ADMIN'] },
+    { label: 'Dashboard', to: '/dashboard' },
+    { label: 'Admin dashboard', to: '/admin', roles: ['ADMIN'] },
+    { label: 'Admin management', to: '/admin/manage', roles: ['ADMIN'] },
+    { label: 'Manager dashboard', to: '/manager', roles: ['MANAGER', 'ADMIN'] },
+    { label: 'Teacher dashboard', to: '/teacher', roles: ['TEACHER', 'ADMIN'] },
+    { label: 'Profile', to: '/profile' },
+    { label: 'Notifications', to: '/notifications' }
+];
 
 const Navbar = () => {
     const navigate = useNavigate();
-    const { user, logout } = useAuth();
+    const { user, logout, refreshToken } = useAuth();
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            if (refreshToken) {
+                await logoutService({ refreshToken });
+            }
+        } catch {
+            // Ignore logout errors; still clear local state.
+        }
         logout();
         navigate('/login');
     };
 
-    const displayName = user?.fullName?.trim() || user?.email || 'Tài khoản của mình';
+    const displayName = user?.fullName?.trim() || user?.email || 'My account';
+    const currentRole = user?.roleRef?.code || user?.role || 'STUDENT';
+    const visibleMenuItems = menuItems.filter((item) => !item.roles || item.roles.includes(currentRole));
     const initials = displayName
         .split(' ')
         .filter(Boolean)
@@ -19,7 +44,7 @@ const Navbar = () => {
         .join('') || 'TK';
 
     return (
-        <header className="app-navbar navbar navbar-expand-lg navbar-dark">
+        <header className="app-navbar navbar navbar-expand-lg navbar-light">
             <div className="container-fluid px-4">
                 <div className="dropdown">
                     <button
@@ -29,18 +54,19 @@ const Navbar = () => {
                         aria-expanded="false"
                     >
                         <span className="account-avatar">{initials}</span>
-                        <span className="d-none d-md-inline">Tài khoản của mình</span>
+                        <span className="d-none d-md-inline">My account</span>
                     </button>
-                    <ul className="dropdown-menu dropdown-menu-dark shadow-lg account-menu">
+                    <ul className="dropdown-menu shadow-lg account-menu">
                         <li>
                             <div className="dropdown-header">
-                                <div className="fw-semibold text-white">{displayName}</div>
-                                <small className="text-white-50">Quản lý tài khoản</small>
+                                <div className="fw-semibold">{displayName}</div>
+                                <small className="text-muted">Manage account</small>
                             </div>
                         </li>
-                        <li><Link className="dropdown-item" to="/home">Home</Link></li>
-                        <li><Link className="dropdown-item" to="/profile">Profile</Link></li>
-                        <li><hr className="dropdown-divider border-secondary" /></li>
+                        {visibleMenuItems.map((item) => (
+                            <li key={item.to}><Link className="dropdown-item" to={item.to}>{item.label}</Link></li>
+                        ))}
+                        <li><hr className="dropdown-divider" /></li>
                         <li><button className="dropdown-item text-danger" type="button" onClick={handleLogout}>Logout</button></li>
                     </ul>
                 </div>

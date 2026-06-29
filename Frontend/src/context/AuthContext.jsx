@@ -1,6 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 const readStoredUser = () => {
     try {
@@ -13,11 +14,13 @@ const readStoredUser = () => {
 
 export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(() => localStorage.getItem('token'));
+    const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem('refreshToken'));
     const [user, setUser] = useState(() => readStoredUser());
 
     useEffect(() => {
         const syncAuth = () => {
             setToken(localStorage.getItem('token'));
+            setRefreshToken(localStorage.getItem('refreshToken'));
             setUser(readStoredUser());
         };
 
@@ -25,17 +28,21 @@ export const AuthProvider = ({ children }) => {
         return () => window.removeEventListener('storage', syncAuth);
     }, []);
 
-    const login = (nextToken, nextUser) => {
+    const login = (nextToken, nextUser, nextRefreshToken) => {
         localStorage.setItem('token', nextToken);
+        localStorage.setItem('refreshToken', nextRefreshToken);
         localStorage.setItem('user', JSON.stringify(nextUser));
         setToken(nextToken);
+        setRefreshToken(nextRefreshToken);
         setUser(nextUser);
     };
 
     const logout = () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         setToken(null);
+        setRefreshToken(null);
         setUser(null);
     };
 
@@ -46,12 +53,13 @@ export const AuthProvider = ({ children }) => {
 
     const value = useMemo(() => ({
         token,
+        refreshToken,
         user,
         isAuthenticated: Boolean(token),
         login,
         logout,
         updateUser,
-    }), [token, user]);
+    }), [token, refreshToken, user]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -22,6 +22,7 @@ const login = async (req, res) => {
         return res.status(200).json({
             message: 'Đăng nhập thành công.',
             token: result.token,
+            refreshToken: result.refreshToken,
             user: result.user,
             url: result.redirectUrl
         });
@@ -34,6 +35,38 @@ const login = async (req, res) => {
             return res.status(403).json({ message: 'Tài khoản chưa được kích hoạt.' });
         }
 
+        console.error(error);
+        return res.status(500).json({ message: 'Lỗi Server Internal' });
+    }
+};
+
+const refreshToken = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        const result = await authService.refreshTokens(refreshToken);
+        return res.status(200).json({
+            message: 'Token refreshed successfully.',
+            token: result.token,
+            refreshToken: result.refreshToken
+        });
+    } catch (error) {
+        if (error.message === 'REFRESH_TOKEN_INVALID' || error.message === 'INVALID_REFRESH_TOKEN') {
+            return res.status(401).json({ message: 'Refresh token không hợp lệ.' });
+        }
+        if (error.message === 'REFRESH_TOKEN_EXPIRED') {
+            return res.status(401).json({ message: 'Refresh token đã hết hạn.' });
+        }
+        console.error(error);
+        return res.status(500).json({ message: 'Lỗi Server Internal' });
+    }
+};
+
+const logout = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        await authService.logout(refreshToken);
+        return res.status(200).json({ message: 'Đăng xuất thành công.' });
+    } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Lỗi Server Internal' });
     }
@@ -87,4 +120,4 @@ const getProfile = async (req, res) => {
     });
 };
 
-module.exports = { register, login, verifyOtp, forgotPassword, resetPassword, getProfile };
+module.exports = { register, login, refreshToken, logout, verifyOtp, forgotPassword, resetPassword, getProfile };
