@@ -24,7 +24,6 @@ router.delete('/categories/:id', authenticateToken, authorizePermissions('COURSE
 router.post('/', authenticateToken, authorizePermissions('COURSE_MANAGE'), courseValidation, validate, courseController.createCourse);
 router.get('/', courseController.getCourses);
 router.get('/:id', param('id').isMongoId(), validate, courseController.getCourseById);
-router.get('/:id/chapters', param('id').isMongoId(), validate, courseController.getCourseChapters);
 router.get('/:id/progress', authenticateToken, param('id').isMongoId(), validate, courseController.getCourseProgress);
 router.post('/:id/image', authenticateToken, authorizePermissions('COURSE_MANAGE'), param('id').isMongoId(), validate, upload.single('file'), courseController.uploadCourseImage);
 router.put('/:id', authenticateToken, authorizePermissions('COURSE_MANAGE'), param('id').isMongoId(), courseValidation, validate, courseController.updateCourse);

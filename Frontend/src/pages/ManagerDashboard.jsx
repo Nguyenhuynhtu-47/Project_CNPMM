@@ -10,7 +10,8 @@ import {
     YAxis
 } from 'recharts';
 import { getAdminUsers } from '../services/adminUser';
-import { getClasses } from '../services/class';
+import { createClass, deleteClass, getClasses, updateClass } from '../services/class';
+import { getCourses } from '../services/course';
 import { getAllEnrollments } from '../services/enrollment';
 import { getAllOrders } from '../services/order';
 import { getStatisticsOverview } from '../services/statistics';
@@ -32,20 +33,25 @@ const toChartData = (breakdown = [], labelKey = 'status') => breakdown.map((item
 }));
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}d`;
+const emptyClass = { code: '', course: '', teacher: '', startDate: '', endDate: '', maxStudents: 20, status: 'OPEN' };
 
 const ManagerDashboard = () => {
     const [stats, setStats] = useState(null);
     const [orders, setOrders] = useState([]);
     const [classes, setClasses] = useState([]);
+    const [courses, setCourses] = useState([]);
     const [students, setStudents] = useState([]);
     const [teachers, setTeachers] = useState([]);
     const [enrollments, setEnrollments] = useState([]);
+    const [classForm, setClassForm] = useState(emptyClass);
+    const [editingClassId, setEditingClassId] = useState('');
     const [dateRange, setDateRange] = useState({ from: thirtyDaysAgo, to: today });
     const [filters, setFilters] = useState({ search: '', status: '' });
     const [pages, setPages] = useState({});
     const [activeTab, setActiveTab] = useState('dashboard');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [message, setMessage] = useState('');
 
     const loadManagerData = useCallback(async () => {
         setLoading(true);
@@ -55,10 +61,11 @@ const ManagerDashboard = () => {
                 from: dateRange.from || undefined,
                 to: dateRange.to || undefined
             };
-            const [statsRes, orderRes, classRes, studentRes, teacherRes, enrollmentRes] = await Promise.all([
+            const [statsRes, orderRes, classRes, courseRes, studentRes, teacherRes, enrollmentRes] = await Promise.all([
                 getStatisticsOverview(params),
                 getAllOrders(params),
                 getClasses(),
+                getCourses({ limit: 200 }),
                 getAdminUsers({ role: 'STUDENT', limit: 200 }),
                 getAdminUsers({ role: 'TEACHER', limit: 200 }),
                 getAllEnrollments()
@@ -67,6 +74,7 @@ const ManagerDashboard = () => {
             setStats(statsRes.data);
             setOrders(orderRes.data.orders || []);
             setClasses(classRes.data.classes || []);
+            setCourses(courseRes.data.courses || []);
             setStudents(studentRes.data.users || []);
             setTeachers(teacherRes.data.users || []);
             setEnrollments(enrollmentRes.data.enrollments || []);
@@ -133,6 +141,58 @@ const ManagerDashboard = () => {
     const pagedOrders = paginate('payments', filteredOrders);
     const pagedClasses = paginate('classes', filteredClasses);
 
+    const submitClass = async (event) => {
+        event.preventDefault();
+        setError('');
+        setMessage('');
+        try {
+            const payload = { ...classForm, maxStudents: Number(classForm.maxStudents || 1) };
+            if (editingClassId) {
+                await updateClass(editingClassId, payload);
+            } else {
+                await createClass(payload);
+            }
+            setClassForm(emptyClass);
+            setEditingClassId('');
+            await loadManagerData();
+            setMessage(editingClassId ? 'Class updated.' : 'Class created.');
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || 'Cannot save class.');
+        }
+    };
+
+    const startEditClass = (classItem) => {
+        setEditingClassId(classItem._id);
+        setClassForm({
+            code: classItem.code || '',
+            course: classItem.course?._id || classItem.course || '',
+            teacher: classItem.teacher?._id || classItem.teacher || '',
+            startDate: classItem.startDate ? classItem.startDate.slice(0, 10) : '',
+            endDate: classItem.endDate ? classItem.endDate.slice(0, 10) : '',
+            maxStudents: classItem.maxStudents || 20,
+            status: classItem.status || 'OPEN'
+        });
+        setActiveTab('classes');
+    };
+
+    const resetClassForm = () => {
+        setClassForm(emptyClass);
+        setEditingClassId('');
+    };
+
+    const handleDeleteClass = async (classItem) => {
+        if (!window.confirm(`Delete class "${classItem.code}"?`)) return;
+        setError('');
+        setMessage('');
+        try {
+            await deleteClass(classItem._id);
+            await loadManagerData();
+            setMessage('Class deleted.');
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || 'Cannot delete class.');
+        }
+    };
+
     const tabs = [
         ['dashboard', 'Dashboard'],
         ['students', 'Students'],
@@ -182,6 +242,7 @@ const ManagerDashboard = () => {
                 </div>
             </div>
 
+            {message && <div className="alert alert-success">{message}</div>}
             {error && <div className="alert alert-danger">{error}</div>}
 
             <div className="row gy-4 mb-4">
@@ -365,6 +426,48 @@ const ManagerDashboard = () => {
 
             {activeTab === 'classes' && (
                 <section className="card p-4">
+                    <div className="d-flex flex-wrap justify-content-between gap-2 mb-3">
+                        <div>
+                            <h4>{editingClassId ? 'Update class' : 'Create class'}</h4>
+                            <p className="text-muted mb-0">Assign a course and teacher. The teacher will manage this class workspace.</p>
+                        </div>
+                        {editingClassId && <button className="btn btn-outline-secondary" type="button" onClick={resetClassForm}>Cancel edit</button>}
+                    </div>
+                    <form className="row gy-3 mb-4" onSubmit={submitClass}>
+                        <div className="col-md-2">
+                            <input className="form-control" placeholder="Class code" value={classForm.code} onChange={(event) => setClassForm({ ...classForm, code: event.target.value })} required />
+                        </div>
+                        <div className="col-md-3">
+                            <select className="form-select" value={classForm.course} onChange={(event) => setClassForm({ ...classForm, course: event.target.value })} required>
+                                <option value="">Course</option>
+                                {courses.map((course) => <option key={course._id} value={course._id}>{course.title}</option>)}
+                            </select>
+                        </div>
+                        <div className="col-md-3">
+                            <select className="form-select" value={classForm.teacher} onChange={(event) => setClassForm({ ...classForm, teacher: event.target.value })} required>
+                                <option value="">Teacher</option>
+                                {teachers.map((teacher) => <option key={teacher._id} value={teacher._id}>{teacher.fullName || teacher.email}</option>)}
+                            </select>
+                        </div>
+                        <div className="col-md-2">
+                            <input className="form-control" type="date" value={classForm.startDate} onChange={(event) => setClassForm({ ...classForm, startDate: event.target.value })} required />
+                        </div>
+                        <div className="col-md-2">
+                            <input className="form-control" type="date" value={classForm.endDate} onChange={(event) => setClassForm({ ...classForm, endDate: event.target.value })} required />
+                        </div>
+                        <div className="col-md-2">
+                            <input className="form-control" type="number" min="1" placeholder="Max students" value={classForm.maxStudents} onChange={(event) => setClassForm({ ...classForm, maxStudents: event.target.value })} required />
+                        </div>
+                        <div className="col-md-3">
+                            <select className="form-select" value={classForm.status} onChange={(event) => setClassForm({ ...classForm, status: event.target.value })}>
+                                {['OPEN', 'IN_PROGRESS', 'COMPLETED', 'CLOSED'].map((status) => <option key={status} value={status}>{status}</option>)}
+                            </select>
+                        </div>
+                        <div className="col-md-2">
+                            <button className="btn btn-primary w-100" type="submit">{editingClassId ? 'Update' : 'Create'}</button>
+                        </div>
+                    </form>
+
                     <h4>Class status tracking</h4>
                     <div className="row gy-3 mb-3">
                         {Object.entries(statusCount(classes)).map(([status, count]) => (
@@ -378,7 +481,7 @@ const ManagerDashboard = () => {
                     </div>
                     <div className="table-responsive">
                         <table className="table align-middle">
-                            <thead><tr><th>Code</th><th>Course</th><th>Teacher</th><th>Students</th><th>Status</th><th>Dates</th></tr></thead>
+                            <thead><tr><th>Code</th><th>Course</th><th>Teacher</th><th>Students</th><th>Status</th><th>Dates</th><th>Actions</th></tr></thead>
                             <tbody>
                                 {pagedClasses.items.map((classItem) => (
                                     <tr key={classItem._id}>
@@ -388,6 +491,12 @@ const ManagerDashboard = () => {
                                         <td>{classItem.currentStudents || 0}/{classItem.maxStudents || 0}</td>
                                         <td><span className="badge text-bg-light">{classItem.status}</span></td>
                                         <td>{classItem.startDate ? new Date(classItem.startDate).toLocaleDateString('vi-VN') : '-'} - {classItem.endDate ? new Date(classItem.endDate).toLocaleDateString('vi-VN') : '-'}</td>
+                                        <td>
+                                            <div className="d-flex flex-wrap gap-2">
+                                                <button className="btn btn-sm btn-outline-primary" type="button" onClick={() => startEditClass(classItem)}>Edit</button>
+                                                <button className="btn btn-sm btn-outline-danger" type="button" onClick={() => handleDeleteClass(classItem)}>Delete</button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

@@ -3,7 +3,12 @@ import notificationService from '../services/notification';
 import { AuthContext } from '../context/AuthContext';
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:8080");
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') : 'http://localhost:8080');
+
+const normalizeNotification = (notification) => ({
+  ...notification,
+  _id: notification._id || notification.id
+});
 
 export default function Notifications() {
   const { user } = useContext(AuthContext);
@@ -29,28 +34,35 @@ export default function Notifications() {
   useEffect(() => {
     if (!user) return;
 
+    const socket = io(SOCKET_URL, { auth: { token: localStorage.getItem('token') } });
+    const addNotification = (data) => {
+      const notification = normalizeNotification(data);
+      setItems((prev) => {
+        if (notification._id && prev.some((item) => item._id === notification._id)) return prev;
+        return [notification, ...prev];
+      });
+    };
+
     socket.emit("join", user._id);
 
-    socket.on("new-notification", (data) => {
-      setItems((prev) => [data, ...prev]);
-    });
+    socket.on("notification", addNotification);
+    socket.on("new-notification", addNotification);
 
     socket.on("enrollment-cancelled", (data) => {
-      setItems((prev) => [
-        {
-          _id: Date.now(),
+      addNotification({
+          _id: data._id || data.id || `enrollment-${data.enrollmentId || Date.now()}`,
           title: data.title,
           message: data.message,
-          createdAt: new Date(),
+          createdAt: data.createdAt || new Date(),
           read: false
-        },
-        ...prev
-      ]);
+      });
     });
 
     return () => {
+      socket.off("notification", addNotification);
       socket.off("new-notification");
       socket.off("enrollment-cancelled");
+      socket.disconnect();
     };
   }, [user]);
 

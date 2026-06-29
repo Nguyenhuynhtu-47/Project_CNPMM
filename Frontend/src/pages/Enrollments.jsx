@@ -57,6 +57,12 @@ const Enrollments = () => {
                                             <h5 className="card-title">{enrollment.course?.title}</h5>
                                             <p className="card-text">Status: {enrollment.status}</p>
                                             <p className="card-text">Progress: {enrollment.progress}%</p>
+                                            {enrollment.status !== 'COMPLETED' && Number(enrollment.progress || 0) >= 100 && (
+                                                <p className="card-text text-muted">Waiting for teacher completion approval.</p>
+                                            )}
+                                            {enrollment.completedAt && (
+                                                <p className="card-text text-success">Completed at: {new Date(enrollment.completedAt).toLocaleDateString('vi-VN')}</p>
+                                            )}
                                             {enrollment.class ? (
                                                 <p className="card-text">Class: {enrollment.class.code || enrollment.class.name}</p>
                                             ) : (

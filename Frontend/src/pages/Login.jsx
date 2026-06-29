@@ -9,9 +9,15 @@ import { useAuth } from '../context/AuthContext';
 import { setCredentials } from '../store/authSlice';
 
 const loginSchema = yup.object({
-    email: yup.string().email('Email khong hop le').required('Email la bat buoc'),
-    password: yup.string().min(6, 'Mat khau toi thieu 6 ky tu').required('Mat khau la bat buoc')
+    email: yup.string().email('Email is invalid').required('Email is required'),
+    password: yup.string().min(6, 'Password must be at least 6 characters').required('Password is required')
 });
+
+const loginErrorMessages = {
+    'Đăng nhập thành công.': 'Login successful.',
+    'Email hoặc mật khẩu không đúng.': 'Email or password is incorrect.',
+    'Tài khoản chưa được kích hoạt.': 'Your account has not been activated.'
+};
 
 const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
@@ -48,7 +54,8 @@ const Login = () => {
             dispatch(setCredentials(credentials));
             navigate(location.state?.from?.pathname || '/home', { replace: true });
         } catch (requestError) {
-            setError(requestError.response?.data?.message || 'Login failed');
+            const message = requestError.response?.data?.message;
+            setError(loginErrorMessages[message] || message || 'Login failed');
         } finally {
             setLoading(false);
         }
@@ -58,16 +65,16 @@ const Login = () => {
         <section className="auth-card-grid">
             <div className="auth-copy-panel auth-copy-panel--login">
                 <span className="eyebrow">Welcome back</span>
-                <h1>Dang nhap de vao trang hoc va quan ly khoa hoc.</h1>
-                <p>He thong se dua ban vao home page sau khi login thanh cong.</p>
+                <h1>Sign in to access your courses and learning dashboard.</h1>
+                <p>The system will take you to the home page after a successful login.</p>
                 <div className="feature-stack">
                     <div>
                         <strong>Login first</strong>
-                        <span>Khong co tai khoan thi dang ky ngay.</span>
+                        <span>Do not have an account yet? Register to get started.</span>
                     </div>
                     <div>
                         <strong>Protected home</strong>
-                        <span>Dang nhap xong moi vao dashboard.</span>
+                        <span>Sign in before opening your dashboard.</span>
                     </div>
                 </div>
             </div>
@@ -75,8 +82,8 @@ const Login = () => {
             <div className="auth-form-panel">
                 <div className="auth-form-card">
                     <span className="eyebrow">Login</span>
-                    <h2>Dang nhap</h2>
-                    <p className="auth-helper">Nhap email va mat khau de tiep tuc.</p>
+                    <h2>Login</h2>
+                    <p className="auth-helper">Enter your email and password to continue.</p>
 
                     {error ? <div className="alert alert-danger py-2">{error}</div> : null}
 
@@ -99,7 +106,7 @@ const Login = () => {
                                     type={showPassword ? 'text' : 'password'}
                                     className="form-control form-control-lg"
                                     {...register('password')}
-                                    placeholder="********"
+                                    placeholder="Enter password"
                                 />
                                 <button
                                     type="button"
