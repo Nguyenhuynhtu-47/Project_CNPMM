@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { getCategories, getCourses } from '../services/course';
 import { enrollInCourse } from '../services/enrollment';
 import { createVnpayPayment } from '../services/payment';
+import { getMyLoyalty } from '../services/loyalty';
 import { setCourses, setCoursesError, setCoursesLoading } from '../store/courseSlice';
 import CourseImage from '../components/CourseImage';
 import PaginationControls from '../components/PaginationControls';
@@ -18,21 +19,25 @@ const Courses = () => {
     const [actionError, setActionError] = useState(null);
     const [success, setSuccess] = useState(null);
     const [checkoutLoading, setCheckoutLoading] = useState(false);
+    const [loyalty, setLoyalty] = useState(null);
+    const [checkoutOptions, setCheckoutOptions] = useState({ couponCode: '', pointsToUse: '' });
 
     useEffect(() => {
         const initialize = async () => {
             dispatch(setCoursesLoading(true));
             dispatch(setCoursesError(null));
             try {
-                const [courseRes, categoryRes] = await Promise.all([
+                const [courseRes, categoryRes, loyaltyRes] = await Promise.all([
                     getCourses(courseQuery),
-                    getCategories()
+                    getCategories(),
+                    getMyLoyalty().catch(() => ({ data: null }))
                 ]);
                 dispatch(setCourses({
                     courses: courseRes.data.courses,
                     pagination: courseRes.data.pagination
                 }));
                 setCategories(categoryRes.data.categories || []);
+                setLoyalty(loyaltyRes.data);
             } catch {
                 dispatch(setCoursesError('Cannot load course data.'));
             } finally {
@@ -73,7 +78,16 @@ const Courses = () => {
         setSuccess(null);
         setCheckoutLoading(true);
         try {
-            const response = await createVnpayPayment(courseId);
+            const response = await createVnpayPayment(courseId, {
+                couponCode: checkoutOptions.couponCode.trim(),
+                pointsToUse: Number(checkoutOptions.pointsToUse || 0)
+            });
+            if (response.data.paid) {
+                setSuccess('Course paid successfully with coupon or loyalty points.');
+                const loyaltyRes = await getMyLoyalty().catch(() => ({ data: loyalty }));
+                setLoyalty(loyaltyRes.data);
+                return;
+            }
             window.location.href = response.data.paymentUrl;
         } catch (requestError) {
             setActionError(requestError.response?.data?.message || 'Cannot create payment.');
@@ -125,6 +139,38 @@ const Courses = () => {
                 {error && <div className="alert alert-danger">{error}</div>}
                 {actionError && <div className="alert alert-danger">{actionError}</div>}
                 {success && <div className="alert alert-success">{success}</div>}
+
+                <div className="card p-3 mb-4">
+                    <div className="row gy-3 align-items-end">
+                        <div className="col-md-4">
+                            <label className="form-label">Coupon code</label>
+                            <input
+                                className="form-control"
+                                placeholder="Example: IELTS10"
+                                value={checkoutOptions.couponCode}
+                                onChange={(event) => setCheckoutOptions((current) => ({ ...current, couponCode: event.target.value }))}
+                            />
+                        </div>
+                        <div className="col-md-4">
+                            <label className="form-label">Use loyalty points</label>
+                            <input
+                                className="form-control"
+                                type="number"
+                                min="0"
+                                max={loyalty?.balance || 0}
+                                placeholder={`Available: ${loyalty?.balance || 0}`}
+                                value={checkoutOptions.pointsToUse}
+                                onChange={(event) => setCheckoutOptions((current) => ({ ...current, pointsToUse: event.target.value }))}
+                            />
+                        </div>
+                        <div className="col-md-4">
+                            <div className="text-muted">
+                                Balance: <strong>{loyalty?.balance || 0}</strong> points
+                                {loyalty?.pointValueVnd ? ` (${loyalty.pointValueVnd.toLocaleString('vi-VN')}d / point)` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 {loading ? (
                     <div>Loading courses...</div>

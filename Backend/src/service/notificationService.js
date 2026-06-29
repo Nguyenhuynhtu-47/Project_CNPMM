@@ -1,12 +1,27 @@
 const Notification = require('../models/Notification');
 const { getIo } = require('../utils/socket');
 
+const toRealtimePayload = (notification, fallback = {}) => ({
+  _id: notification._id,
+  id: notification._id,
+  title: notification.title || fallback.title,
+  message: notification.message || fallback.message,
+  meta: notification.meta || fallback.meta || {},
+  read: Boolean(notification.read),
+  createdAt: notification.createdAt || new Date()
+});
+
+const emitRealtimeNotification = (io, userId, payload) => {
+  io.to(`user:${userId}`).emit('notification', payload);
+  io.to(`user:${userId}`).emit('new-notification', payload);
+};
+
 const createNotification = async (userId, title, message, meta = {}) => {
   const n = await Notification.create({ user: userId, title, message, meta });
   try {
     const io = getIo();
     if (io) {
-      io.to(`user:${userId}`).emit('notification', { id: n._id, title, message, meta, createdAt: n.createdAt });
+      emitRealtimeNotification(io, userId, toRealtimePayload(n, { title, message, meta }));
     }
   } catch (err) {
     console.error('Failed to emit notification', err);
@@ -41,13 +56,7 @@ const broadcastNotification = async (users = [], title, message, meta = {}) => {
     const io = getIo();
     if (io) {
       notifications.forEach((notification) => {
-        io.to(`user:${notification.user}`).emit('notification', {
-          id: notification._id,
-          title,
-          message,
-          meta,
-          createdAt: notification.createdAt
-        });
+        emitRealtimeNotification(io, notification.user, toRealtimePayload(notification, { title, message, meta }));
       });
     }
   } catch (err) {

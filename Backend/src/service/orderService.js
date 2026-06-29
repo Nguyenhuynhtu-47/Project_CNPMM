@@ -4,6 +4,8 @@ const orderRepository = require('../repositories/orderRepository');
 const enrollmentService = require('./enrollmentService');
 const orderDto = require('../dtos/orderDto');
 const notificationService = require('./notificationService');
+const couponService = require('./couponService');
+const loyaltyService = require('./loyaltyService');
 
 const ORDER_PAYMENT_TIMEOUT_MINUTES = Number(process.env.ORDER_PAYMENT_TIMEOUT_MINUTES) || 30;
 
@@ -11,19 +13,40 @@ const buildOrderExpiresAt = () => {
   return new Date(Date.now() + ORDER_PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
 };
 
-const createOrder = async ({ userId, courseId, currency = 'VND', paymentMethod = 'VNPAY' }) => {
+const createOrder = async ({ userId, courseId, currency = 'VND', paymentMethod = 'VNPAY', couponCode = '', pointsToUse = 0 }) => {
   const course = await courseRepository.findById(courseId);
   if (!course) throw new Error('COURSE_NOT_FOUND');
+
+  const subtotal = Number(course.price || 0);
+  const couponResult = await couponService.validateCoupon({ code: couponCode, userId, subtotal });
+  const afterCouponAmount = Math.max(subtotal - couponResult.discount, 0);
 
   const order = await orderRepository.create({
     user: userId,
     course: courseId,
-    amount: course.price,
+    subtotal,
+    amount: afterCouponAmount,
     currency,
     paymentMethod,
+    coupon: couponResult.coupon?._id,
+    couponCode: couponResult.coupon?.code || '',
+    couponDiscount: couponResult.discount,
     status: 'PENDING',
     expiresAt: buildOrderExpiresAt()
   });
+
+  const pointResult = await loyaltyService.spendPoints({
+    userId,
+    requestedPoints: pointsToUse,
+    maxAmount: order.amount,
+    orderId: order._id
+  });
+  if (pointResult.points > 0) {
+    order.pointsRedeemed = pointResult.points;
+    order.pointsDiscount = pointResult.discount;
+    order.amount = Math.max(order.amount - pointResult.discount, 0);
+    await order.save();
+  }
 
   await order.populate('course', 'title price');
   return orderDto.toOrderResponse(order);
@@ -38,6 +61,7 @@ const markOrderFailed = async (orderId, providerData = {}) => {
   order.transactionRef = providerData.transactionRef || order.transactionRef;
 
   await order.save();
+  await loyaltyService.refundSpentPoints({ order });
   return orderDto.toOrderResponse(order);
 };
 
@@ -52,12 +76,17 @@ const markOrderPaid = async (orderId, providerData = {}) => {
     order.cancelReason = 'PAYMENT_TIMEOUT';
     order.providerData = providerData;
     await order.save();
+    await loyaltyService.refundSpentPoints({ order });
     throw new Error('ORDER_EXPIRED');
   }
 
   order.status = 'PAID';
   order.providerData = providerData;
   order.transactionRef = providerData.transactionRef || order.transactionRef;
+  if (order.coupon && !order.couponUsageCounted) {
+    await couponService.countCouponUsage(order.coupon);
+    order.couponUsageCounted = true;
+  }
 
   const existingEnrollment = await enrollmentService.getExistingEnrollment(order.user, order.course);
   if (existingEnrollment) {
@@ -65,6 +94,7 @@ const markOrderPaid = async (orderId, providerData = {}) => {
       order.class = existingEnrollment.class;
     }
     await order.save();
+    await loyaltyService.awardOrderPoints({ order });
     return orderDto.toOrderResponse(order);
   }
 
@@ -74,6 +104,7 @@ const markOrderPaid = async (orderId, providerData = {}) => {
   }
 
   await order.save();
+  await loyaltyService.awardOrderPoints({ order });
 
   await enrollmentService.createEnrollment({
     user: order.user,
@@ -153,6 +184,14 @@ const cancelExpiredPendingOrders = async () => {
   if (!expiredOrders.length) return [];
 
   await orderRepository.cancelExpiredPending(expiredOrders.map((order) => order._id), now);
+  await Promise.all(expiredOrders.map((order) => {
+    order.status = 'CANCELLED';
+    order.cancelledAt = now;
+    order.cancelReason = 'PAYMENT_TIMEOUT';
+    return loyaltyService.refundSpentPoints({ order }).catch((error) => {
+      console.error('Failed to refund points for expired order', error);
+    });
+  }));
 
   await Promise.all(expiredOrders.map((order) => notificationService.createNotification(
     order.user,

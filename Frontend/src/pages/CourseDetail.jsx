@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getCourseById, getCourseChapters, getCourseProgress } from '../services/course';
 import { createVnpayPayment } from '../services/payment';
 import { enrollInCourse } from '../services/enrollment';
+import { getMyLoyalty } from '../services/loyalty';
 import CourseImage from '../components/CourseImage';
 import PaginationControls from '../components/PaginationControls';
 import { createPagination } from '../utils/pagination';
@@ -18,6 +19,8 @@ const CourseDetail = () => {
     const [enrollLoading, setEnrollLoading] = useState(false);
     const [success, setSuccess] = useState(null);
     const [chapterPage, setChapterPage] = useState(1);
+    const [loyalty, setLoyalty] = useState(null);
+    const [checkoutOptions, setCheckoutOptions] = useState({ couponCode: '', pointsToUse: '' });
     const pagedChapters = createPagination(chapters, chapterPage, 5);
 
     useEffect(() => {
@@ -25,14 +28,16 @@ const CourseDetail = () => {
             setLoading(true);
             setError(null);
             try {
-                const [courseRes, chaptersRes, progressRes] = await Promise.all([
+                const [courseRes, chaptersRes, progressRes, loyaltyRes] = await Promise.all([
                     getCourseById(id),
                     getCourseChapters(id),
-                    getCourseProgress(id)
+                    getCourseProgress(id),
+                    getMyLoyalty().catch(() => ({ data: null }))
                 ]);
                 setCourse(courseRes.data.course);
                 setChapters(chaptersRes.data.chapters);
                 setProgress(progressRes.data.progress);
+                setLoyalty(loyaltyRes.data);
             } catch {
                 setError('Cannot load course information.');
             } finally {
@@ -48,7 +53,16 @@ const CourseDetail = () => {
         setError(null);
         setSuccess(null);
         try {
-            const response = await createVnpayPayment(id);
+            const response = await createVnpayPayment(id, {
+                couponCode: checkoutOptions.couponCode.trim(),
+                pointsToUse: Number(checkoutOptions.pointsToUse || 0)
+            });
+            if (response.data.paid) {
+                setSuccess('Course paid successfully with coupon or loyalty points.');
+                const loyaltyRes = await getMyLoyalty().catch(() => ({ data: loyalty }));
+                setLoyalty(loyaltyRes.data);
+                return;
+            }
             window.location.href = response.data.paymentUrl;
         } catch (requestError) {
             setError(requestError.response?.data?.message || 'Unable to create payment.');
@@ -134,6 +148,35 @@ const CourseDetail = () => {
                     <div className="card p-4 mb-4">
                         <h3>Quick actions</h3>
                         <p>{Number(course.price || 0) === 0 ? 'Enroll directly and wait for class assignment.' : 'Start the payment flow to enroll and get assigned to a class.'}</p>
+                        {Number(course.price || 0) > 0 && (
+                            <div className="row gy-3 mb-3">
+                                <div className="col-12">
+                                    <label className="form-label">Coupon code</label>
+                                    <input
+                                        className="form-control"
+                                        placeholder="Example: IELTS10"
+                                        value={checkoutOptions.couponCode}
+                                        onChange={(event) => setCheckoutOptions((current) => ({ ...current, couponCode: event.target.value }))}
+                                    />
+                                </div>
+                                <div className="col-12">
+                                    <label className="form-label">Use loyalty points</label>
+                                    <input
+                                        className="form-control"
+                                        type="number"
+                                        min="0"
+                                        max={loyalty?.balance || 0}
+                                        placeholder={`Available: ${loyalty?.balance || 0}`}
+                                        value={checkoutOptions.pointsToUse}
+                                        onChange={(event) => setCheckoutOptions((current) => ({ ...current, pointsToUse: event.target.value }))}
+                                    />
+                                    <small className="text-muted">
+                                        Balance: {loyalty?.balance || 0} points
+                                        {loyalty?.pointValueVnd ? ` - ${loyalty.pointValueVnd.toLocaleString('vi-VN')} VND / point` : ''}
+                                    </small>
+                                </div>
+                            </div>
+                        )}
                         <div className="d-grid gap-2 mt-3">
                             {Number(course.price || 0) === 0 ? (
                                 <button className="btn btn-outline-primary" type="button" onClick={handleEnroll} disabled={enrollLoading}>

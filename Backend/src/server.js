@@ -59,6 +59,8 @@ const statisticsRoutes = require('./routes/statisticsRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const adminUserRoutes = require('./routes/adminUserRoutes');
 const teacherRoutes = require('./routes/teacherRoutes');
+const couponRoutes = require('./routes/couponRoutes');
+const loyaltyRoutes = require('./routes/loyaltyRoutes');
 const http = require('http');
 const { Server } = require('socket.io');
 const { setIo } = require('./utils/socket');
@@ -89,6 +91,8 @@ app.use('/api/statistics', statisticsRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/teacher', teacherRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/loyalty', loyaltyRoutes);
 
 app.get("/", (req, res) => {
     res.send("API Running");

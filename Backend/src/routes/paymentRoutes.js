@@ -8,6 +8,8 @@ const validate = require('../middleware/validateMiddleware');
 router.post('/vnpay', authenticateToken, [
   body('courseId').isMongoId().withMessage('Course id is required'),
   body('amount').optional().isNumeric().withMessage('Amount must be numeric'),
+  body('couponCode').optional().isString(),
+  body('pointsToUse').optional().isInt({ min: 0 }).withMessage('Points must be a positive number'),
   validate
 ], paymentController.createPayment);
 
