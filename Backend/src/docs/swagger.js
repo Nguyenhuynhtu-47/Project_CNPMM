@@ -366,6 +366,15 @@ const options = {
       '/api/chapters': {
         post: { tags: ['Lessons'], security: [{ bearerAuth: [] }], summary: 'Create chapter', responses: { 201: { description: 'Chapter created' } } }
       },
+      '/api/chapters/class/{classId}': {
+        get: {
+          tags: ['Lessons'],
+          security: [{ bearerAuth: [] }],
+          summary: 'List class chapters',
+          parameters: [{ name: 'classId', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { 200: { description: 'Class chapters' } }
+        }
+      },
       '/api/lessons': {
         post: { tags: ['Lessons'], security: [{ bearerAuth: [] }], summary: 'Create lesson', responses: { 201: { description: 'Lesson created' } } }
       },
@@ -381,11 +390,12 @@ const options = {
       '/api/quizzes': {
         post: { tags: ['Quizzes'], security: [{ bearerAuth: [] }], summary: 'Create quiz', responses: { 201: { description: 'Quiz created' } } }
       },
-      '/api/quizzes/course/{courseId}': {
+      '/api/quizzes/class/{classId}': {
         get: {
           tags: ['Quizzes'],
-          summary: 'List quizzes by course',
-          parameters: [{ name: 'courseId', in: 'path', required: true, schema: { type: 'string' } }],
+          security: [{ bearerAuth: [] }],
+          summary: 'List quizzes by class',
+          parameters: [{ name: 'classId', in: 'path', required: true, schema: { type: 'string' } }],
           responses: { 200: { description: 'Quizzes' } }
         }
       },

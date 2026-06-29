@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { getAssignments, submitAssignment } from '../services/assignment';
 import { getMyAttendance, markAttendance } from '../services/attendance';
 import { getMyCertificates, getCertificatePdfUrl } from '../services/certificate';
-import { getCourseChapters } from '../services/course';
+import { getChaptersByClass } from '../services/chapter';
 import { createClassComment, getClassComments } from '../services/discussion';
 import { getEnrollments } from '../services/enrollment';
 import { completeLesson, getLessonsByChapter } from '../services/lesson';
+import { getQuizzesByClass } from '../services/quiz';
 import { createReview, getCourseReviews } from '../services/review';
 import { addToWishlist, getWishlist, removeFromWishlist } from '../services/wishlist';
 import PaginationControls from '../components/PaginationControls';
@@ -20,6 +21,7 @@ const StudentLearning = () => {
     const [chapters, setChapters] = useState([]);
     const [lessonsByChapter, setLessonsByChapter] = useState({});
     const [activeLesson, setActiveLesson] = useState(null);
+    const [quizzes, setQuizzes] = useState([]);
     const [assignments, setAssignments] = useState([]);
     const [attendance, setAttendance] = useState([]);
     const [certificates, setCertificates] = useState([]);
@@ -73,9 +75,10 @@ const StudentLearning = () => {
     }, []);
 
     const loadCourseDetails = useCallback(async () => {
-        if (!courseId) {
+        if (!courseId || !classId) {
             setChapters([]);
             setLessonsByChapter({});
+            setQuizzes([]);
             setAssignments([]);
             setReviews([]);
             setComments([]);
@@ -86,8 +89,9 @@ const StudentLearning = () => {
         setDetailLoading(true);
         setError(null);
         try {
-            const [chapterRes, assignmentRes, reviewRes, commentRes] = await Promise.all([
-                getCourseChapters(courseId),
+            const [chapterRes, quizRes, assignmentRes, reviewRes, commentRes] = await Promise.all([
+                getChaptersByClass(classId),
+                classId ? getQuizzesByClass(classId) : Promise.resolve({ data: { quizzes: [] } }),
                 getAssignments({ course: courseId, class: classId || undefined }),
                 getCourseReviews(courseId),
                 classId ? getClassComments(classId) : Promise.resolve({ data: { comments: [] } })
@@ -106,6 +110,7 @@ const StudentLearning = () => {
             setChapters(chapterItems);
             setLessonsByChapter(lessonsMap);
             setActiveLesson(firstLesson);
+            setQuizzes(quizRes.data.quizzes || []);
             setAssignments(assignmentRes.data.assignments || []);
             setReviews(reviewRes.data.reviews || []);
             setComments(commentRes.data.comments || []);
@@ -135,6 +140,7 @@ const StudentLearning = () => {
     const paginate = (key, items) => createPagination(items, pages[key] || 1, 5);
     const setPage = (key, page) => setPages((current) => ({ ...current, [key]: page }));
     const pagedCertificates = paginate('certificates', certificates);
+    const pagedQuizzes = paginate('quizzes', quizzes);
     const pagedAssignments = paginate('assignments', assignments);
     const pagedReviews = paginate('reviews', reviews);
     const pagedComments = paginate('comments', comments);
@@ -228,8 +234,10 @@ const StudentLearning = () => {
         setSuccess(null);
         try {
             await submitAssignment(assignmentId, payload);
+            const response = await getAssignments({ course: courseId, class: classId || undefined });
+            setAssignments(response.data.assignments || []);
             setSubmissionForm((current) => ({ ...current, [assignmentId]: { content: '', fileUrl: '' } }));
-            setSuccess('Assignment submitted.');
+            setSuccess('Assignment submitted. It will be completed after teacher grading.');
         } catch (requestError) {
             setError(requestError.response?.data?.message || 'Cannot submit assignment.');
         }
@@ -399,18 +407,53 @@ const StudentLearning = () => {
                                 </div>
 
                                 <div className="card p-4 mb-4">
+                                    <h4>Quizzes</h4>
+                                    {quizzes.length === 0 ? (
+                                        <p className="text-muted">No quiz is available for this course yet.</p>
+                                    ) : (
+                                        pagedQuizzes.items.map((quiz) => (
+                                            <div key={quiz._id} className="border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                                                <div>
+                                                    <h6 className="mb-1">{quiz.title}</h6>
+                                                    <p className="text-muted mb-0">{quiz.description || 'Complete this quiz as part of your learning journey.'}</p>
+                                                    <small className="text-muted">
+                                                        {quiz.durationMinutes || quiz.timeLimitSeconds ? `Time limit: ${quiz.timeLimitSeconds ? `${quiz.timeLimitSeconds}s` : `${quiz.durationMinutes} minutes`}` : 'No time limit'}
+                                                    </small>
+                                                </div>
+                                                <Link className="btn btn-primary" to={`/quizzes/${quiz._id}`}>
+                                                    Take quiz
+                                                </Link>
+                                            </div>
+                                        ))
+                                    )}
+                                    {quizzes.length > 0 && <PaginationControls pagination={pagedQuizzes.pagination} onPageChange={(page) => setPage('quizzes', page)} itemLabel="quizzes" />}
+                                </div>
+
+                                <div className="card p-4 mb-4">
                                     <h4>Assignments</h4>
                                     {assignments.length === 0 ? (
                                         <p className="text-muted">No assignment is available for this course.</p>
                                     ) : (
                                         pagedAssignments.items.map((assignment) => {
                                             const formValue = submissionForm[assignment._id] || {};
+                                            const submission = assignment.mySubmission;
+                                            const isCompleted = submission?.status === 'GRADED';
+                                            const isSubmitted = Boolean(submission);
                                             return (
                                                 <div key={assignment._id} className="border-bottom py-3">
                                                     <div className="d-flex justify-content-between gap-3">
                                                         <div>
                                                             <h6>{assignment.title}</h6>
                                                             <p className="text-muted mb-2">{assignment.description}</p>
+                                                            {submission && (
+                                                                <div className="d-flex flex-wrap gap-2 mb-2">
+                                                                    <span className={`badge ${isCompleted ? 'text-bg-success' : 'text-bg-warning'}`}>
+                                                                        {isCompleted ? 'Completed' : 'Waiting teacher grade'}
+                                                                    </span>
+                                                                    {isCompleted && <span className="badge text-bg-light">Score: {submission.score ?? 0}/{assignment.maxScore}</span>}
+                                                                    {submission.feedback && <span className="text-muted small">Feedback: {submission.feedback}</span>}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                         <span className="badge text-bg-light">{assignment.maxScore} pts</span>
                                                     </div>
@@ -433,8 +476,8 @@ const StudentLearning = () => {
                                                             [assignment._id]: { ...formValue, fileUrl: event.target.value }
                                                         }))}
                                                     />
-                                                    <button className="btn btn-outline-primary" type="button" onClick={() => handleAssignmentSubmit(assignment._id)} disabled={!formValue.content && !formValue.fileUrl}>
-                                                        Submit assignment
+                                                    <button className="btn btn-outline-primary" type="button" onClick={() => handleAssignmentSubmit(assignment._id)} disabled={isCompleted || (!formValue.content && !formValue.fileUrl)}>
+                                                        {isCompleted ? 'Completed' : isSubmitted ? 'Resubmit before grading' : 'Submit assignment'}
                                                     </button>
                                                 </div>
                                             );

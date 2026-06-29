@@ -16,7 +16,6 @@ export const getCourses = (query = {}) => {
 };
 
 export const getCourseById = (courseId) => api.get(`/courses/${courseId}`);
-export const getCourseChapters = (courseId) => api.get(`/courses/${courseId}/chapters`);
 export const getCourseProgress = (courseId) => api.get(`/courses/${courseId}/progress`);
 export const createCourse = (data) => api.post('/courses', data);
 export const updateCourse = (courseId, data) => api.put(`/courses/${courseId}`, data);

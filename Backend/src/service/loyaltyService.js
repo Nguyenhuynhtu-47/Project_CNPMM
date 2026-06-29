@@ -49,6 +49,15 @@ const spendPoints = async ({ userId, requestedPoints = 0, maxAmount = 0, orderId
   return { points: pointsToSpend, discount };
 };
 
+const previewSpendPoints = async ({ userId, requestedPoints = 0, maxAmount = 0 }) => {
+  const balance = await getBalance(userId);
+  const usablePoints = Math.min(Math.max(Number(requestedPoints || 0), 0), balance);
+  const discount = Math.min(usablePoints * POINT_VALUE_VND, Math.max(Number(maxAmount || 0), 0));
+  const points = Math.ceil(discount / POINT_VALUE_VND);
+
+  return { balance, points, discount };
+};
+
 const refundSpentPoints = async ({ order }) => {
   if (!order?.pointsRedeemed || order.pointsRefunded) return null;
 
@@ -120,6 +129,7 @@ module.exports = {
   awardOrderPoints,
   awardReviewPoints,
   getMyLoyalty,
+  previewSpendPoints,
   refundSpentPoints,
   spendPoints
 };

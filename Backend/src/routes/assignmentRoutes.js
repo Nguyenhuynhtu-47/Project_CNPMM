@@ -13,6 +13,7 @@ router.post(
   authorizePermissions('ASSIGNMENT_MANAGE'),
   [
     body('course').isMongoId().withMessage('Course id is required'),
+    body('class').isMongoId().withMessage('Class id is required'),
     body('title').notEmpty().withMessage('Title is required'),
     validate
   ],
@@ -25,6 +26,7 @@ router.put(
   [
     param('id').isMongoId(),
     body('course').optional().isMongoId(),
+    body('class').optional().isMongoId(),
     body('title').optional().notEmpty().withMessage('Title cannot be empty'),
     validate
   ],

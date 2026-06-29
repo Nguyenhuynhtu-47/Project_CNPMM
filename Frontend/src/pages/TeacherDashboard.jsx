@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createAssignment, getAssignments, getAssignmentSubmissions, gradeSubmission, updateAssignment } from '../services/assignment';
 import { getAttendance, markAttendance } from '../services/attendance';
-import { createChapter } from '../services/chapter';
-import { getCourseChapters } from '../services/course';
+import { createChapter, getChaptersByClass } from '../services/chapter';
 import { getClassComments, pinClassComment } from '../services/discussion';
 import { createLesson, deleteLesson, deleteLessonMaterial, getLessonsByChapter, reorderLessons, uploadLessonMedia } from '../services/lesson';
-import { createQuiz, getQuizzesByCourse, updateQuiz } from '../services/quiz';
-import { getAssignmentAnalytics, getTeacherClasses, getTeacherClassStudents } from '../services/teacher';
+import { createQuiz, getQuizzesByClass, updateQuiz } from '../services/quiz';
+import { approveCourseCompletion, getAssignmentAnalytics, getTeacherClasses, getTeacherClassStudents } from '../services/teacher';
 import PaginationControls from '../components/PaginationControls';
 import { createPagination } from '../utils/pagination';
 
@@ -36,6 +35,7 @@ const TeacherDashboard = () => {
     const [classes, setClasses] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('');
     const [students, setStudents] = useState([]);
+    const [classEnrollments, setClassEnrollments] = useState([]);
     const [chapters, setChapters] = useState([]);
     const [lessonsByChapter, setLessonsByChapter] = useState({});
     const [assignments, setAssignments] = useState([]);
@@ -92,6 +92,7 @@ const TeacherDashboard = () => {
     const loadClassDetails = useCallback(async () => {
         if (!classId || !courseId) {
             setStudents([]);
+            setClassEnrollments([]);
             setChapters([]);
             setLessonsByChapter({});
             setAssignments([]);
@@ -106,9 +107,9 @@ const TeacherDashboard = () => {
         try {
             const [studentRes, chapterRes, assignmentRes, quizRes, attendanceRes, commentRes] = await Promise.all([
                 getTeacherClassStudents(classId),
-                getCourseChapters(courseId),
+                getChaptersByClass(classId),
                 getAssignments({ course: courseId, class: classId }),
-                getQuizzesByCourse(courseId),
+                getQuizzesByClass(classId),
                 getAttendance({ class: classId }),
                 getClassComments(classId)
             ]);
@@ -137,6 +138,7 @@ const TeacherDashboard = () => {
             );
 
             setStudents(studentRes.data.students || []);
+            setClassEnrollments(studentRes.data.enrollments || []);
             setChapters(chapterItems);
             setSelectedChapterId((current) => current || chapterItems[0]?._id || '');
             setLessonsByChapter(Object.fromEntries(lessonEntries));
@@ -174,11 +176,11 @@ const TeacherDashboard = () => {
 
     const handleCreateChapter = async (event) => {
         event.preventDefault();
-        if (!courseId) return;
+        if (!courseId || !classId) return;
         setError('');
         setSuccess('');
         try {
-            await createChapter({ ...chapterForm, course: courseId, order: Number(chapterForm.order || 0) });
+            await createChapter({ ...chapterForm, course: courseId, class: classId, order: Number(chapterForm.order || 0) });
             setChapterForm({ title: '', description: '', order: 0 });
             await reloadDetails('Chapter created.');
         } catch (requestError) {
@@ -303,6 +305,18 @@ const TeacherDashboard = () => {
         }
     };
 
+    const handleApproveCompletion = async (enrollment) => {
+        if (!window.confirm(`Mark ${enrollment.user?.fullName || enrollment.user?.email || 'this student'} as completed for this course?`)) return;
+        setError('');
+        setSuccess('');
+        try {
+            await approveCourseCompletion(enrollment._id, { note: 'Teacher confirmed course completion.' });
+            await reloadDetails('Course completion approved.');
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || 'Cannot approve course completion.');
+        }
+    };
+
     const handleSaveQuiz = async (event) => {
         event.preventDefault();
         if (!courseId) return;
@@ -316,6 +330,7 @@ const TeacherDashboard = () => {
             }
             const payload = {
                 course: courseId,
+                class: classId,
                 title: quizForm.title,
                 durationMinutes: Number(quizForm.durationMinutes || 30),
                 passScore: Number(quizForm.passScore || 70),
@@ -422,7 +437,7 @@ const TeacherDashboard = () => {
 
     const paginate = (key, items, limit = 5) => createPagination(items, pages[key] || 1, limit);
     const setPage = (key, page) => setPages((current) => ({ ...current, [key]: page }));
-    const pagedStudents = paginate('students', students, 10);
+    const pagedClassEnrollments = paginate('classEnrollments', classEnrollments, 10);
     const pagedChapters = paginate('chapters', chapters, 3);
     const pagedAssignments = paginate('assignments', assignments, 5);
     const pagedQuizzes = paginate('quizzes', quizzes, 5);
@@ -496,19 +511,40 @@ const TeacherDashboard = () => {
                             <h4>Class students</h4>
                             <div className="table-responsive">
                                 <table className="table align-middle">
-                                    <thead><tr><th>Name</th><th>Email</th><th>Phone</th></tr></thead>
+                                    <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Progress</th><th>Status</th><th>Actions</th></tr></thead>
                                     <tbody>
-                                        {pagedStudents.items.map((student) => (
-                                            <tr key={student._id}>
-                                                <td>{student.fullName}</td>
-                                                <td>{student.email}</td>
-                                                <td>{student.phone || '-'}</td>
-                                            </tr>
-                                        ))}
+                                        {pagedClassEnrollments.items.map((enrollment) => {
+                                            const student = enrollment.user || {};
+                                            const completed = enrollment.status === 'COMPLETED';
+                                            return (
+                                                <tr key={enrollment._id}>
+                                                    <td>{student.fullName || '-'}</td>
+                                                    <td>{student.email || '-'}</td>
+                                                    <td>{student.phone || '-'}</td>
+                                                    <td>{enrollment.progress || 0}%</td>
+                                                    <td>
+                                                        <span className={`badge ${completed ? 'text-bg-success' : 'text-bg-light'}`}>
+                                                            {completed ? 'COMPLETED' : enrollment.status}
+                                                        </span>
+                                                        {enrollment.completedAt && <div className="small text-muted">{new Date(enrollment.completedAt).toLocaleDateString('vi-VN')}</div>}
+                                                    </td>
+                                                    <td>
+                                                        <button
+                                                            className="btn btn-sm btn-outline-success"
+                                                            type="button"
+                                                            onClick={() => handleApproveCompletion(enrollment)}
+                                                            disabled={completed}
+                                                        >
+                                                            {completed ? 'Approved' : 'Mark completed'}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
-                            {students.length > 0 && <PaginationControls pagination={pagedStudents.pagination} onPageChange={(page) => setPage('students', page)} itemLabel="students" />}
+                            {classEnrollments.length > 0 && <PaginationControls pagination={pagedClassEnrollments.pagination} onPageChange={(page) => setPage('classEnrollments', page)} itemLabel="students" />}
                         </section>
                     )}
 
@@ -712,7 +748,7 @@ const TeacherDashboard = () => {
                             </div>
                             <div className="col-lg-7">
                                 <div className="card p-4">
-                                    <h4>Course quizzes</h4>
+                                    <h4>Class quizzes</h4>
                                     {quizzes.length === 0 ? <p className="text-muted">No quiz yet.</p> : pagedQuizzes.items.map((quiz) => (
                                         <div className="border-top py-2" key={quiz._id}>
                                             <div className="d-flex justify-content-between gap-3">

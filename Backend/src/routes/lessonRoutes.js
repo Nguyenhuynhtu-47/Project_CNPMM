@@ -32,9 +32,9 @@ const lessonUpdateValidation = [
 ];
 
 router.post('/', authenticateToken, authorizePermissions('LESSON_MANAGE'), lessonValidation, lessonController.createLesson);
-router.get('/chapter/:chapterId', lessonController.getLessonsByChapter);
+router.get('/chapter/:chapterId', authenticateToken, param('chapterId').isMongoId(), validate, lessonController.getLessonsByChapter);
 router.patch('/chapter/:chapterId/reorder', authenticateToken, authorizePermissions('LESSON_MANAGE'), param('chapterId').isMongoId(), validate, lessonController.reorderLessons);
-router.get('/:id', param('id').isMongoId(), validate, lessonController.getLessonById);
+router.get('/:id', authenticateToken, param('id').isMongoId(), validate, lessonController.getLessonById);
 router.post('/:id/complete', authenticateToken, param('id').isMongoId(), validate, lessonController.completeLesson);
 router.post('/:id/upload', authenticateToken, authorizePermissions('LESSON_MANAGE'), param('id').isMongoId(), validate, upload.single('file'), lessonMediaController.uploadLessonMedia);
 router.delete('/:id/material', authenticateToken, authorizePermissions('LESSON_MANAGE'), param('id').isMongoId(), validate, lessonMediaController.deleteLessonMedia);

@@ -52,6 +52,50 @@ const createOrder = async ({ userId, courseId, currency = 'VND', paymentMethod =
   return orderDto.toOrderResponse(order);
 };
 
+const previewOrder = async ({ userId, courseId, couponCode = '', pointsToUse = 0 }) => {
+  const course = await courseRepository.findById(courseId);
+  if (!course) throw new Error('COURSE_NOT_FOUND');
+
+  const subtotal = Number(course.price || 0);
+  const couponResult = await couponService.validateCoupon({ code: couponCode, userId, subtotal });
+  const afterCouponAmount = Math.max(subtotal - couponResult.discount, 0);
+  const pointResult = await loyaltyService.previewSpendPoints({
+    userId,
+    requestedPoints: pointsToUse,
+    maxAmount: afterCouponAmount
+  });
+  const amount = Math.max(afterCouponAmount - pointResult.discount, 0);
+
+  return {
+    course: {
+      _id: course._id,
+      title: course.title,
+      price: course.price,
+      imageUrl: course.imageUrl,
+      category: course.category
+    },
+    subtotal,
+    coupon: couponResult.coupon
+      ? {
+        _id: couponResult.coupon._id,
+        code: couponResult.coupon.code,
+        name: couponResult.coupon.name,
+        discountType: couponResult.coupon.discountType,
+        discountValue: couponResult.coupon.discountValue
+      }
+      : null,
+    couponCode: couponResult.coupon?.code || '',
+    couponDiscount: couponResult.discount,
+    pointsBalance: pointResult.balance,
+    requestedPoints: Number(pointsToUse || 0),
+    pointsRedeemed: pointResult.points,
+    pointsDiscount: pointResult.discount,
+    amount,
+    currency: 'VND',
+    freeCheckout: amount <= 0
+  };
+};
+
 const markOrderFailed = async (orderId, providerData = {}) => {
   const order = await orderRepository.findById(orderId);
   if (!order) throw new Error('ORDER_NOT_FOUND');
@@ -211,6 +255,7 @@ const cancelExpiredPendingOrders = async () => {
 
 module.exports = {
   createOrder,
+  previewOrder,
   markOrderPaid,
   markOrderFailed,
   getOrdersForUser,

@@ -18,11 +18,12 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Courses = lazy(() => import('./pages/Courses'));
 const CourseDetail = lazy(() => import('./pages/CourseDetail'));
-const QuizList = lazy(() => import('./pages/QuizList'));
+const Checkout = lazy(() => import('./pages/Checkout'));
 const QuizTake = lazy(() => import('./pages/QuizTake'));
 const Notifications = lazy(() => import('./components/Notifications'));
 const Enrollments = lazy(() => import('./pages/Enrollments'));
 const StudentLearning = lazy(() => import('./pages/StudentLearning'));
+const Wishlist = lazy(() => import('./pages/Wishlist'));
 const Orders = lazy(() => import('./pages/Orders'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -134,11 +135,11 @@ function App() {
           />
 
           <Route
-            path="/courses/:id/quizzes"
+            path="/checkout/:courseId"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute roles={['STUDENT', 'USER', 'ADMIN']}>
                 <ProtectedLayout>
-                  <QuizList />
+                  <Checkout />
                 </ProtectedLayout>
               </ProtectedRoute>
             }
@@ -194,6 +195,17 @@ function App() {
               <ProtectedRoute>
                 <ProtectedLayout>
                   <StudentLearning />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/wishlist"
+            element={
+              <ProtectedRoute roles={['STUDENT', 'USER', 'ADMIN']}>
+                <ProtectedLayout>
+                  <Wishlist />
                 </ProtectedLayout>
               </ProtectedRoute>
             }

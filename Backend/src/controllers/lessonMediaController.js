@@ -1,5 +1,6 @@
 const Lesson = require('../models/Lesson');
 const { uploadDataUri } = require('../utils/cloudinary');
+const { canManageClass } = require('../utils/classAccess');
 
 const allowedTypesToContentType = (mimetype) => {
   if (mimetype.startsWith('video/')) return 'VIDEO';
@@ -16,13 +17,15 @@ exports.uploadLessonMedia = async (req, res) => {
     const file = req.file;
     if (!file) return res.status(400).json({ message: 'No file uploaded' });
 
-    const lesson = await Lesson.findById(lessonId);
+    const lesson = await Lesson.findById(lessonId).populate({ path: 'chapter', select: 'class' });
     if (!lesson) return res.status(404).json({ message: 'Lesson not found' });
+    const allowed = await canManageClass(req.user, lesson.chapter?.class);
+    if (!allowed) return res.status(403).json({ message: 'You do not manage this class' });
 
     const base64 = file.buffer.toString('base64');
     const dataUri = `data:${file.mimetype};base64,${base64}`;
 
-    const uploadResult = await uploadDataUri(dataUri, { folder: `elms/courses/${lesson.chapter}` });
+    const uploadResult = await uploadDataUri(dataUri, { folder: `elms/classes/${lesson.chapter?._id || lesson.chapter}` });
 
     lesson.contentUrl = uploadResult.secure_url;
     lesson.contentType = allowedTypesToContentType(file.mimetype);
@@ -37,8 +40,10 @@ exports.uploadLessonMedia = async (req, res) => {
 
 exports.deleteLessonMedia = async (req, res) => {
   try {
-    const lesson = await Lesson.findById(req.params.id);
+    const lesson = await Lesson.findById(req.params.id).populate({ path: 'chapter', select: 'class' });
     if (!lesson) return res.status(404).json({ message: 'Lesson not found' });
+    const allowed = await canManageClass(req.user, lesson.chapter?.class);
+    if (!allowed) return res.status(403).json({ message: 'You do not manage this class' });
 
     lesson.contentUrl = '';
     lesson.contentType = 'ARTICLE';
