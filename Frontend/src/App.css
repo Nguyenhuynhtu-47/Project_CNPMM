@@ -196,13 +196,13 @@ a {
 }
 
 .login-page {
-  width: min(1180px, calc(100% - 40px));
+  width: min(1280px, calc(100% - 40px));
   min-height: 100vh;
   margin: 0 auto;
   padding: 36px 0;
-  grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
+  grid-template-columns: minmax(0, 1.18fr) minmax(390px, 0.82fr);
   gap: 30px;
-  align-items: center;
+  align-items: stretch;
 }
 
 .auth-copy-panel,
@@ -238,7 +238,7 @@ a {
 .login-page .auth-copy-panel--login {
   position: relative;
   overflow: hidden;
-  min-height: 680px;
+  min-height: 620px;
   padding: 48px;
   border: 0;
   border-radius: 32px;
@@ -278,15 +278,15 @@ a {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 22px;
+  gap: 18px;
 }
 
 .login-page .auth-copy-panel h1 {
   max-width: 620px;
   margin: 6px 0 0;
   color: #0f1f3d;
-  font-size: clamp(2.7rem, 5vw, 4.8rem);
-  line-height: 0.98;
+  font-size: clamp(2.55rem, 4.4vw, 4.25rem);
+  line-height: 1;
   letter-spacing: -0.04em;
 }
 
@@ -300,8 +300,8 @@ a {
 
 .learning-visual {
   position: relative;
-  min-height: 210px;
-  margin: 12px 0 4px;
+  min-height: 176px;
+  margin: 4px 0 0;
 }
 
 .learning-visual__card,
@@ -316,9 +316,9 @@ a {
 
 .learning-visual__card {
   left: 0;
-  top: 12px;
+  top: 0;
   width: min(310px, 70%);
-  padding: 24px;
+  padding: 20px;
   border-radius: 28px;
   display: grid;
   gap: 6px;
@@ -343,7 +343,7 @@ a {
 
 .learning-visual__book {
   right: 28px;
-  bottom: 10px;
+  bottom: 0;
   min-width: 250px;
   padding: 16px;
   border-radius: 22px;
@@ -390,7 +390,7 @@ a {
 }
 
 .login-feature-stack div {
-  min-height: 128px;
+  min-height: 112px;
   padding: 18px;
   border-color: rgba(255, 255, 255, 0.7);
   background: rgba(255, 255, 255, 0.58);
@@ -447,18 +447,22 @@ a {
 }
 
 .login-page .auth-form-panel {
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
 }
 
 .login-form-card {
-  max-width: 500px;
+  max-width: 480px;
   min-height: 620px;
   padding: 48px;
   border: 1px solid rgba(37, 99, 235, 0.1);
   border-radius: 30px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 30px 80px rgba(15, 23, 42, 0.13);
+}
+
+.login-page .eyebrow {
+  white-space: nowrap;
 }
 
 .login-form-card h2 {
