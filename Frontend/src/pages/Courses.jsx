@@ -43,20 +43,20 @@ const Courses = () => {
         initialize();
     }, [courseQuery, dispatch]);
 
-    const handleFilters = async () => {
-        setActionError(null);
-        setSuccess(null);
-        setCourseQuery((current) => ({ ...current, page: 1, q: searchText, category }));
+    const handleLimitChange = (limit) => {
+        setCourseQuery((current) => ({ ...current, page: 1, limit }));
     };
 
     const handlePageChange = (page) => {
         setCourseQuery((current) => ({ ...current, page }));
     };
 
-    const handleLimitChange = (limit) => {
-        setCourseQuery((current) => ({ ...current, page: 1, limit }));
+    const handleFilters = async () => {
+        setActionError(null);
+        setSuccess(null);
+        setCourseQuery((current) => ({ ...current, page: 1, q: searchText, category }));
     };
-
+    
     const handleEnroll = async (courseId) => {
         setActionError(null);
         setSuccess(null);
