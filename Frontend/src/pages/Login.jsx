@@ -9,8 +9,15 @@ import { useAuth } from '../context/AuthContext';
 import { setCredentials } from '../store/authSlice';
 
 const loginSchema = yup.object({
-    email: yup.string().email('Email khong hop le').required('Email la bat buoc'),
-    password: yup.string().min(6, 'Mat khau toi thieu 6 ky tu').required('Mat khau la bat buoc')
+    email: yup
+        .string()
+        .email('Please enter a valid email address')
+        .required('Email is required'),
+
+    password: yup
+        .string()
+        .min(6, 'Password must be at least 6 characters')
+        .required('Password is required')
 });
 
 const Login = () => {
