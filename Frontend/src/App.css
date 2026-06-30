@@ -195,6 +195,16 @@ a {
   align-items: stretch;
 }
 
+.login-page {
+  width: min(1180px, calc(100% - 40px));
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 36px 0;
+  grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
+  gap: 30px;
+  align-items: center;
+}
+
 .auth-copy-panel,
 .auth-form-card,
 .hero-banner,
@@ -223,6 +233,179 @@ a {
   background:
     radial-gradient(circle at top right, rgba(37, 99, 235, 0.14), transparent 30%),
     linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.9));
+}
+
+.login-page .auth-copy-panel--login {
+  position: relative;
+  overflow: hidden;
+  min-height: 680px;
+  padding: 48px;
+  border: 0;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 16% 14%, rgba(255, 255, 255, 0.92), transparent 16%),
+    radial-gradient(circle at 88% 18%, rgba(125, 211, 252, 0.55), transparent 24%),
+    radial-gradient(circle at 88% 88%, rgba(59, 130, 246, 0.28), transparent 30%),
+    linear-gradient(145deg, #eaf4ff 0%, #dbeafe 48%, #eff6ff 100%);
+  box-shadow: 0 28px 80px rgba(37, 99, 235, 0.16);
+}
+
+.login-page .auth-copy-panel--login::before,
+.login-page .auth-copy-panel--login::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.login-page .auth-copy-panel--login::before {
+  width: 280px;
+  height: 280px;
+  left: -96px;
+  bottom: -110px;
+  background: rgba(96, 165, 250, 0.26);
+}
+
+.login-page .auth-copy-panel--login::after {
+  width: 180px;
+  height: 180px;
+  right: -50px;
+  top: -42px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.login-copy-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 22px;
+}
+
+.login-page .auth-copy-panel h1 {
+  max-width: 620px;
+  margin: 6px 0 0;
+  color: #0f1f3d;
+  font-size: clamp(2.7rem, 5vw, 4.8rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.login-page .auth-copy-panel p {
+  max-width: 560px;
+  margin: 0;
+  color: #44546f;
+  font-size: 1.08rem;
+  line-height: 1.75;
+}
+
+.learning-visual {
+  position: relative;
+  min-height: 210px;
+  margin: 12px 0 4px;
+}
+
+.learning-visual__card,
+.learning-visual__book,
+.learning-visual__bubble {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 24px 54px rgba(37, 99, 235, 0.16);
+  backdrop-filter: blur(18px);
+}
+
+.learning-visual__card {
+  left: 0;
+  top: 12px;
+  width: min(310px, 70%);
+  padding: 24px;
+  border-radius: 28px;
+  display: grid;
+  gap: 6px;
+}
+
+.learning-visual__card span,
+.learning-visual__book small {
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.learning-visual__card strong {
+  color: #1d4ed8;
+  font-size: 3.2rem;
+  line-height: 1;
+}
+
+.learning-visual__card small {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.learning-visual__book {
+  right: 28px;
+  bottom: 10px;
+  min-width: 250px;
+  padding: 16px;
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.learning-visual__book > span {
+  width: 56px;
+  height: 70px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 900;
+  background: linear-gradient(145deg, #2563eb, #60a5fa);
+  box-shadow: inset 0 -10px 18px rgba(15, 23, 42, 0.14);
+}
+
+.learning-visual__book strong {
+  display: block;
+  color: #0f172a;
+}
+
+.learning-visual__bubble {
+  right: 62px;
+  top: 4px;
+  width: 70px;
+  height: 70px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  color: #1d4ed8;
+  font-weight: 900;
+  font-size: 1.45rem;
+  transform: rotate(8deg);
+}
+
+.login-feature-stack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.login-feature-stack div {
+  min-height: 128px;
+  padding: 18px;
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(14px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-feature-stack div:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 34px rgba(37, 99, 235, 0.12);
+}
+
+.login-feature-stack span {
+  color: #53627a;
+  line-height: 1.55;
 }
 
 .auth-copy-panel--register {
@@ -261,6 +444,137 @@ a {
   flex-direction: column;
   justify-content: center;
   gap: 10px;
+}
+
+.login-page .auth-form-panel {
+  align-items: center;
+  justify-content: center;
+}
+
+.login-form-card {
+  max-width: 500px;
+  min-height: 620px;
+  padding: 48px;
+  border: 1px solid rgba(37, 99, 235, 0.1);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.13);
+}
+
+.login-form-card h2 {
+  margin: 6px 0 0;
+  color: #0f172a;
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  letter-spacing: -0.035em;
+}
+
+.login-form-card .auth-helper {
+  margin-bottom: 8px;
+  line-height: 1.65;
+}
+
+.login-form-card .auth-form {
+  gap: 18px;
+  margin-top: 16px;
+}
+
+.login-form-card .field-label {
+  gap: 10px;
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.login-form-card .field-label .form-control {
+  min-height: 58px;
+  border-radius: 18px;
+  border-color: rgba(37, 99, 235, 0.12);
+  background: #f8fbff;
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.login-form-card .field-label .form-control:hover {
+  border-color: rgba(37, 99, 235, 0.26);
+  background: #fff;
+}
+
+.login-form-card .field-label .form-control:focus {
+  background: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.11), 0 14px 28px rgba(37, 99, 235, 0.1);
+}
+
+.login-form-card .password-toggle {
+  right: 0.85rem;
+  width: auto;
+  min-width: 4.25rem;
+  padding: 0 0.9rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.login-form-card .password-field .form-control {
+  padding-right: 5.8rem;
+}
+
+.login-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #64748b;
+  font-size: 0.94rem;
+}
+
+.remember-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.remember-option input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--brand);
+}
+
+.login-options a,
+.login-signup-link a {
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.login-options a:hover,
+.login-signup-link a:hover {
+  color: #1d4ed8;
+}
+
+.login-form-card .auth-primary-btn {
+  min-height: 58px;
+  margin-top: 4px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 52%, #60a5fa 100%);
+  box-shadow: 0 18px 34px rgba(37, 99, 235, 0.28);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.login-form-card .auth-primary-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: saturate(1.05);
+  box-shadow: 0 22px 42px rgba(37, 99, 235, 0.34);
+}
+
+.login-form-card .auth-primary-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.login-signup-link {
+  justify-content: center;
+  margin-top: 20px;
+  color: #64748b;
 }
 
 .auth-form {
@@ -733,7 +1047,23 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .login-page {
+    width: min(720px, calc(100% - 28px));
+    min-height: auto;
+    padding: 24px 0 42px;
+    grid-template-columns: 1fr;
+  }
+
   .auth-copy-panel {
+    min-height: auto;
+  }
+
+  .login-page .auth-copy-panel--login {
+    min-height: auto;
+  }
+
+  .login-form-card {
+    max-width: none;
     min-height: auto;
   }
 }
@@ -751,6 +1081,61 @@ a {
   .course-card,
   .profile-card {
     padding: 20px;
+  }
+
+  .login-page {
+    width: calc(100% - 20px);
+    gap: 16px;
+  }
+
+  .login-page .auth-copy-panel--login,
+  .login-form-card {
+    border-radius: 22px;
+    padding: 24px;
+  }
+
+  .login-page .auth-copy-panel h1 {
+    font-size: 2.4rem;
+    letter-spacing: -0.03em;
+  }
+
+  .learning-visual {
+    min-height: 245px;
+  }
+
+  .learning-visual__card,
+  .learning-visual__book,
+  .learning-visual__bubble {
+    position: relative;
+  }
+
+  .learning-visual__card {
+    width: 100%;
+    left: auto;
+    top: auto;
+  }
+
+  .learning-visual__book {
+    right: auto;
+    bottom: auto;
+    min-width: 0;
+    margin-top: 12px;
+  }
+
+  .learning-visual__bubble {
+    position: absolute;
+    right: 12px;
+    top: -8px;
+  }
+
+  .login-feature-stack {
+    grid-template-columns: 1fr;
+  }
+
+  .login-options {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .list-card {

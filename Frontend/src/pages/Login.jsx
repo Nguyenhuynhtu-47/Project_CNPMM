@@ -55,28 +55,50 @@ const Login = () => {
     };
 
     return (
-        <section className="auth-card-grid">
+        <section className="auth-card-grid login-page">
             <div className="auth-copy-panel auth-copy-panel--login">
-                <span className="eyebrow">Welcome back</span>
-                <h1>Dang nhap de vao trang hoc va quan ly khoa hoc.</h1>
-                <p>He thong se dua ban vao home page sau khi login thanh cong.</p>
-                <div className="feature-stack">
-                    <div>
-                        <strong>Login first</strong>
-                        <span>Khong co tai khoan thi dang ky ngay.</span>
+                <div className="login-copy-content">
+                    <span className="eyebrow">English Course Hub</span>
+                    <h1>Master English with a smarter learning journey.</h1>
+                    <p>
+                        Join interactive classes, track your progress, and manage every lesson in one elegant English
+                        learning workspace.
+                    </p>
+
+                    <div className="learning-visual" aria-hidden="true">
+                        <div className="learning-visual__card learning-visual__card--primary">
+                            <span>Speaking class</span>
+                            <strong>95%</strong>
+                            <small>Weekly progress</small>
+                        </div>
+                        <div className="learning-visual__book">
+                            <span>EN</span>
+                            <div>
+                                <strong>Vocabulary</strong>
+                                <small>32 new words</small>
+                            </div>
+                        </div>
+                        <div className="learning-visual__bubble">A+</div>
                     </div>
-                    <div>
-                        <strong>Protected home</strong>
-                        <span>Dang nhap xong moi vao dashboard.</span>
+
+                    <div className="feature-stack login-feature-stack">
+                        <div>
+                            <strong>Personalized learning</strong>
+                            <span>Follow courses, quizzes, and lessons matched to your English goals.</span>
+                        </div>
+                        <div>
+                            <strong>Course management</strong>
+                            <span>Access your dashboard, enrollments, and progress after signing in.</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div className="auth-form-panel">
-                <div className="auth-form-card">
+                <div className="auth-form-card login-form-card">
                     <span className="eyebrow">Login</span>
-                    <h2>Dang nhap</h2>
-                    <p className="auth-helper">Nhap email va mat khau de tiep tuc.</p>
+                    <h2>Welcome Back</h2>
+                    <p className="auth-helper">Sign in to continue your English learning experience.</p>
 
                     {error ? <div className="alert alert-danger py-2">{error}</div> : null}
 
@@ -87,7 +109,7 @@ const Login = () => {
                                 type="email"
                                 className="form-control form-control-lg"
                                 {...register('email')}
-                                placeholder="you@example.com"
+                                placeholder="student@example.com"
                             />
                             {errors.email ? <span className="text-danger small">{errors.email.message}</span> : null}
                         </label>
@@ -99,7 +121,7 @@ const Login = () => {
                                     type={showPassword ? 'text' : 'password'}
                                     className="form-control form-control-lg"
                                     {...register('password')}
-                                    placeholder="********"
+                                    placeholder="Enter your password"
                                 />
                                 <button
                                     type="button"
@@ -113,14 +135,22 @@ const Login = () => {
                             {errors.password ? <span className="text-danger small">{errors.password.message}</span> : null}
                         </label>
 
+                        <div className="login-options">
+                            <label className="remember-option">
+                                <input type="checkbox" />
+                                <span>Remember me</span>
+                            </label>
+                            <Link to="/forgot-password">Forgot password?</Link>
+                        </div>
+
                         <button type="submit" className="btn btn-primary btn-lg w-100 auth-primary-btn" disabled={loading}>
                             {loading ? 'Signing in...' : 'Login'}
                         </button>
                     </form>
 
-                    <div className="auth-links">
-                        <Link to="/forgot-password">Forgot password?</Link>
-                        <Link to="/register">New here? Register</Link>
+                    <div className="auth-links login-signup-link">
+                        <span>Don&apos;t have an account?</span>
+                        <Link to="/register">Sign up</Link>
                     </div>
                 </div>
             </div>
