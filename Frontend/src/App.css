@@ -358,13 +358,10 @@ a {
 
 .auth-card-grid--register .password-toggle {
   right: 0.55rem;
-  width: auto;
-  height: auto;
-  padding: 0;
+  width: 2.35rem;
+  height: 2.35rem;
   background: transparent;
   color: #6b7280;
-  font-size: 0.86rem;
-  font-weight: 700;
 }
 
 .auth-card-grid--register .auth-primary-btn,
@@ -479,6 +476,16 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.password-toggle svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .password-toggle:hover {

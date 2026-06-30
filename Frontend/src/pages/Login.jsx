@@ -7,6 +7,7 @@ import * as yup from 'yup';
 import { login } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
 import { setCredentials } from '../store/authSlice';
+import PasswordVisibilityIcon from '../components/PasswordVisibilityIcon';
 
 const loginSchema = yup.object({
     email: yup.string().email('Email khong hop le').required('Email la bat buoc'),
@@ -107,7 +108,7 @@ const Login = () => {
                                     onClick={() => setShowPassword((value) => !value)}
                                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                                 >
-                                    {showPassword ? 'Hide' : 'Show'}
+                                    <PasswordVisibilityIcon visible={showPassword} />
                                 </button>
                             </div>
                             {errors.password ? <span className="text-danger small">{errors.password.message}</span> : null}

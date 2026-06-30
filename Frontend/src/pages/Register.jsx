@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { register as registerAccount } from '../services/auth';
+import PasswordVisibilityIcon from '../components/PasswordVisibilityIcon';
 
 const registerSchema = yup.object({
     email: yup.string().email('Email is invalid').required('Email is required'),
@@ -125,7 +126,7 @@ const Register = () => {
                                     onClick={() => setShowPassword((value) => !value)}
                                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                                 >
-                                    {showPassword ? 'Hide' : 'Show'}
+                                    <PasswordVisibilityIcon visible={showPassword} />
                                 </button>
                             </div>
                             {errors.password ? <span className="text-danger small">{errors.password.message}</span> : null}
@@ -146,7 +147,7 @@ const Register = () => {
                                     onClick={() => setShowConfirmPassword((value) => !value)}
                                     aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                                 >
-                                    {showConfirmPassword ? 'Hide' : 'Show'}
+                                    <PasswordVisibilityIcon visible={showConfirmPassword} />
                                 </button>
                             </div>
                             {errors.confirmPassword ? <span className="text-danger small">{errors.confirmPassword.message}</span> : null}
