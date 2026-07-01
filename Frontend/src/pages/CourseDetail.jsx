@@ -106,60 +106,11 @@ const CourseDetail = () => {
                 <div className="col-lg-8 d-flex flex-column gap-4">
                     {/* Course Overview details */}
                     <div className="card border-0 shadow-sm rounded-4 p-4">
-                        <h4 className="fw-bold text-dark mb-3 fs-5">What you will learn</h4>
-                        <p className="text-muted small mb-0">This course is designed to guide you step-by-step through core English principles. By the end, you will be able to speak, write, and execute key exercises confidently within various class workspaces.</p>
+                        <h4 className="fw-bold text-dark mb-3 fs-5">About this course</h4>
+                        <p className="text-muted small mb-0">{course.description}</p>
                     </div>
 
-                    {/* 3. Curriculum Syllabus accordion */}
-                    <div className="card border-0 shadow-sm rounded-4 p-4">
-                        <h4 className="fw-bold text-dark mb-4 fs-5">Course Syllabus</h4>
-                        <div className="accordion rounded-3 overflow-hidden border" id="syllabusAccordion">
-                            <div className="accordion-item">
-                                <h2 className="accordion-header" id="headingOne">
-                                    <button className="accordion-button fw-bold text-dark bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                                        Chapter 1: Getting Started & Foundations
-                                    </button>
-                                </h2>
-                                <div id="collapseOne" className="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#syllabusAccordion">
-                                    <div className="accordion-body p-0">
-                                        <ul className="list-group list-group-flush">
-                                            <li className="list-group-item d-flex align-items-center gap-2.5 py-3 px-4">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                                <span className="small text-dark">Lesson 1.1: Welcome & Course Overview introduction</span>
-                                            </li>
-                                            <li className="list-group-item d-flex align-items-center gap-2.5 py-3 px-4">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                                <span className="small text-dark">Lesson 1.2: Essential Setup & Study prerequisites</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="accordion-item">
-                                <h2 className="accordion-header" id="headingTwo">
-                                    <button className="accordion-button collapsed fw-bold text-dark bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                                        Chapter 2: Theoretical Core Concepts & Practice
-                                    </button>
-                                </h2>
-                                <div id="collapseTwo" className="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#syllabusAccordion">
-                                    <div className="accordion-body p-0">
-                                        <ul className="list-group list-group-flush">
-                                            <li className="list-group-item d-flex align-items-center gap-2.5 py-3 px-4">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                                <span className="small text-dark">Lesson 2.1: Key Theoretical Principles Explained</span>
-                                            </li>
-                                            <li className="list-group-item d-flex align-items-center gap-2.5 py-3 px-4">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                                <span className="small text-dark">Lesson 2.2: Homework assignments details review</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 4. Student Reviews List */}
+{/* 4. Student Reviews List */}
                     <div className="card border-0 shadow-sm rounded-4 p-4">
                         <h4 className="fw-bold text-dark mb-4 fs-5">Student Reviews ({reviewCount})</h4>
                         {reviewsLoading ? (
