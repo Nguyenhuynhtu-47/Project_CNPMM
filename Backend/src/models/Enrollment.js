@@ -30,6 +30,17 @@ const enrollmentSchema = new mongoose.Schema(
       default: 0,
       min: 0,
       max: 100
+    },
+    completedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    completedAt: {
+      type: Date
+    },
+    completionNote: {
+      type: String,
+      default: ''
     }
   },
   {

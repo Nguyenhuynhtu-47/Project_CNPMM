@@ -16,6 +16,7 @@ const normalizeQuestion = (question = {}) => ({
 
 const normalizeQuizPayload = (data = {}) => ({
   course: data.course,
+  class: data.class,
   title: data.title,
   description: data.description,
   durationMinutes: data.durationMinutes,
@@ -32,12 +33,12 @@ const createQuiz = async (data) => {
   return Quiz.create(compactObject(normalizeQuizPayload(data)));
 };
 
-const getQuizzesByCourse = async (courseId) => {
-  return Quiz.find({ course: courseId }).sort({ createdAt: -1 });
+const getQuizzesByClass = async (classId) => {
+  return Quiz.find({ class: classId }).sort({ createdAt: -1 });
 };
 
 const getQuizById = async (id) => {
-  return Quiz.findById(id);
+  return Quiz.findById(id).populate('class', 'code teacher course');
 };
 
 const updateQuiz = async (id, data) => {
@@ -137,7 +138,7 @@ const gradeSubmission = async (quizId, userId, submittedAnswers = []) => {
 module.exports = {
   createQuiz,
   updateQuiz,
-  getQuizzesByCourse,
+  getQuizzesByClass,
   getQuizById,
   startAttempt,
   gradeSubmission

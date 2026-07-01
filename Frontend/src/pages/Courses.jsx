@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getCategories, getCourses } from '../services/course';
 import { enrollInCourse } from '../services/enrollment';
-import { createVnpayPayment } from '../services/payment';
 import { setCourses, setCoursesError, setCoursesLoading } from '../store/courseSlice';
 import CourseImage from '../components/CourseImage';
 import PaginationControls from '../components/PaginationControls';
@@ -17,7 +16,6 @@ const Courses = () => {
     const [courseQuery, setCourseQuery] = useState({ page: 1, limit: 6, q: '', category: '' });
     const [actionError, setActionError] = useState(null);
     const [success, setSuccess] = useState(null);
-    const [checkoutLoading, setCheckoutLoading] = useState(false);
 
     useEffect(() => {
         const initialize = async () => {
@@ -65,20 +63,6 @@ const Courses = () => {
             setSuccess('Course enrollment created successfully.');
         } catch (requestError) {
             setActionError(requestError.response?.data?.message || 'Cannot enroll in this course.');
-        }
-    };
-
-    const handleCheckout = async (courseId) => {
-        setActionError(null);
-        setSuccess(null);
-        setCheckoutLoading(true);
-        try {
-            const response = await createVnpayPayment(courseId);
-            window.location.href = response.data.paymentUrl;
-        } catch (requestError) {
-            setActionError(requestError.response?.data?.message || 'Cannot create payment.');
-        } finally {
-            setCheckoutLoading(false);
         }
     };
 
@@ -148,9 +132,9 @@ const Courses = () => {
                                                 </button>
                                             )}
                                             {Number(course.price || 0) > 0 && (
-                                                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => handleCheckout(course._id)} disabled={checkoutLoading}>
-                                                    {checkoutLoading ? 'Processing...' : 'Checkout'}
-                                                </button>
+                                                <Link className="btn btn-sm btn-outline-primary" to={`/checkout/${course._id}`}>
+                                                    Checkout
+                                                </Link>
                                             )}
                                             <Link className="btn btn-sm btn-primary" to={`/courses/${course._id}`}>
                                                 Details

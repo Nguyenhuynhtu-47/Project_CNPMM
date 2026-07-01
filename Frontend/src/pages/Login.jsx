@@ -20,6 +20,12 @@ const loginSchema = yup.object({
         .required('Password is required')
 });
 
+const loginErrorMessages = {
+    'Đăng nhập thành công.': 'Login successful.',
+    'Email hoặc mật khẩu không đúng.': 'Email or password is incorrect.',
+    'Tài khoản chưa được kích hoạt.': 'Your account has not been activated.'
+};
+
 const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
@@ -55,7 +61,8 @@ const Login = () => {
             dispatch(setCredentials(credentials));
             navigate(location.state?.from?.pathname || '/home', { replace: true });
         } catch (requestError) {
-            setError(requestError.response?.data?.message || 'Login failed');
+            const message = requestError.response?.data?.message;
+            setError(loginErrorMessages[message] || message || 'Login failed');
         } finally {
             setLoading(false);
         }

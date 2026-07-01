@@ -1,8 +1,14 @@
 const Assignment = require('../models/Assignment');
 const Submission = require('../models/Submission');
+const { canAccessClass, canManageClass } = require('../utils/classAccess');
+const { normalizeRoleCode } = require('../service/rbacService');
 
 const createAssignment = async (req, res) => {
   try {
+    if (!req.body.class) return res.status(400).json({ message: 'Class id is required' });
+    const allowed = await canManageClass(req.user, req.body.class);
+    if (!allowed) return res.status(403).json({ message: 'You do not manage this class' });
+
     const assignment = await Assignment.create({ ...req.body, teacher: req.user._id });
     return res.status(201).json({ message: 'Assignment created', assignment });
   } catch (error) {
@@ -13,6 +19,12 @@ const createAssignment = async (req, res) => {
 
 const updateAssignment = async (req, res) => {
   try {
+    const existingAssignment = await Assignment.findById(req.params.id);
+    if (!existingAssignment) return res.status(404).json({ message: 'Assignment not found' });
+    const targetClassId = req.body.class || existingAssignment.class;
+    const allowed = await canManageClass(req.user, targetClassId);
+    if (!allowed) return res.status(403).json({ message: 'You do not manage this class' });
+
     const updates = {
       course: req.body.course,
       class: req.body.class,
@@ -39,15 +51,38 @@ const updateAssignment = async (req, res) => {
 
 const listAssignments = async (req, res) => {
   try {
+    const role = normalizeRoleCode(req.user?.roleRef?.code || req.user?.role);
     const query = {};
     if (req.query.course) query.course = req.query.course;
     if (req.query.class) query.class = req.query.class;
+    if (req.query.class) {
+      const allowed = await canAccessClass(req.user, req.query.class);
+      if (!allowed) return res.status(403).json({ message: 'You cannot access this class assignments' });
+    } else if (!['ADMIN', 'MANAGER'].includes(role)) {
+      return res.status(400).json({ message: 'Class id is required' });
+    }
     const assignments = await Assignment.find(query)
       .populate('course', 'title')
       .populate('class', 'code')
       .populate('teacher', 'fullName email')
       .sort({ createdAt: -1 });
-    return res.status(200).json({ assignments });
+    if (['ADMIN', 'MANAGER', 'TEACHER'].includes(role)) {
+      return res.status(200).json({ assignments });
+    }
+
+    const submissions = await Submission.find({
+      assignment: { $in: assignments.map((assignment) => assignment._id) },
+      student: req.user._id
+    });
+    const submissionByAssignment = new Map(submissions.map((submission) => [String(submission.assignment), submission]));
+    const assignmentsWithSubmission = assignments.map((assignment) => {
+      const assignmentObject = assignment.toObject();
+      assignmentObject.mySubmission = submissionByAssignment.get(String(assignment._id)) || null;
+      assignmentObject.completed = assignmentObject.mySubmission?.status === 'GRADED';
+      return assignmentObject;
+    });
+
+    return res.status(200).json({ assignments: assignmentsWithSubmission });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Cannot load assignments' });
@@ -56,6 +91,14 @@ const listAssignments = async (req, res) => {
 
 const submitAssignment = async (req, res) => {
   try {
+    const assignment = await Assignment.findById(req.params.id);
+    if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
+    const allowed = await canAccessClass(req.user, assignment.class);
+    const role = normalizeRoleCode(req.user?.roleRef?.code || req.user?.role);
+    if (!allowed || ['ADMIN', 'TEACHER', 'MANAGER'].includes(role)) {
+      return res.status(403).json({ message: 'You cannot submit this assignment' });
+    }
+
     const submission = await Submission.findOneAndUpdate(
       { assignment: req.params.id, student: req.user._id },
       {
@@ -77,6 +120,11 @@ const submitAssignment = async (req, res) => {
 
 const gradeSubmission = async (req, res) => {
   try {
+    const existingSubmission = await Submission.findById(req.params.submissionId).populate('assignment', 'class');
+    if (!existingSubmission) return res.status(404).json({ message: 'Submission not found' });
+    const allowed = await canManageClass(req.user, existingSubmission.assignment?.class);
+    if (!allowed) return res.status(403).json({ message: 'You do not manage this class' });
+
     const submission = await Submission.findByIdAndUpdate(
       req.params.submissionId,
       {
@@ -97,6 +145,11 @@ const gradeSubmission = async (req, res) => {
 
 const listSubmissions = async (req, res) => {
   try {
+    const assignment = await Assignment.findById(req.params.id);
+    if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
+    const allowed = await canManageClass(req.user, assignment.class);
+    if (!allowed) return res.status(403).json({ message: 'You do not manage this class' });
+
     const submissions = await Submission.find({ assignment: req.params.id })
       .populate('student', 'fullName email')
       .sort({ submittedAt: -1 });

@@ -48,7 +48,7 @@ const issueCertificate = async (req, res) => {
   try {
     const enrollment = await Enrollment.findById(req.body.enrollment).populate('course', 'title');
     if (!enrollment) return res.status(404).json({ message: 'Enrollment not found' });
-    if (enrollment.progress < 100) return res.status(400).json({ message: 'Course must be 100% completed' });
+    if (enrollment.status !== 'COMPLETED') return res.status(400).json({ message: 'Course must be approved as completed by teacher' });
     if (Number(req.body.finalScore) < 70) return res.status(400).json({ message: 'Final score must be at least 70' });
 
     const existingCertificate = await Certificate.findOne({ enrollment: enrollment._id });

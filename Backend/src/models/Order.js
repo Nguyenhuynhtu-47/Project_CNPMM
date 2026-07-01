@@ -21,6 +21,51 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0
     },
+    subtotal: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    coupon: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coupon'
+    },
+    couponCode: {
+      type: String,
+      default: ''
+    },
+    couponDiscount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    pointsRedeemed: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    pointsDiscount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    pointsEarned: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    pointsAwarded: {
+      type: Boolean,
+      default: false
+    },
+    pointsRefunded: {
+      type: Boolean,
+      default: false
+    },
+    couponUsageCounted: {
+      type: Boolean,
+      default: false
+    },
     currency: {
       type: String,
       default: 'VND'
