@@ -74,6 +74,25 @@ svg {
   color: var(--brand) !important;
 }
 
+.notification-unread-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Sidebar Shell Layout Wrapper */
 .app-shell--sidebar-layout {
   display: flex;

@@ -1,12 +1,77 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import { logout as logoutService } from '../services/auth';
+import notificationService from '../services/notification';
 import { menuItems } from '../utils/navigationConfig';
 import RoleNavigation from './RoleNavigation';
+
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') : 'http://localhost:8080');
+
+const normalizeNotification = (notification) => ({
+    ...notification,
+    _id: notification?._id || notification?.id
+});
 
 const Navbar = () => {
     const navigate = useNavigate();
     const { user, logout, refreshToken } = useAuth();
+    const [unreadCount, setUnreadCount] = useState(0);
+    const seenNotificationIdsRef = useRef(new Set());
+
+    useEffect(() => {
+        if (!user) {
+            setUnreadCount(0);
+            return undefined;
+        }
+
+        let mounted = true;
+
+        const loadUnreadCount = async () => {
+            try {
+                const response = await notificationService.listNotifications();
+                const notifications = response.data.notifications || [];
+                if (mounted) {
+                    seenNotificationIdsRef.current = new Set(notifications.map((notification) => notification._id || notification.id).filter(Boolean));
+                    setUnreadCount(notifications.filter((notification) => !notification.read).length);
+                }
+            } catch {
+                if (mounted) setUnreadCount(0);
+            }
+        };
+
+        loadUnreadCount();
+
+        const socket = io(SOCKET_URL, { auth: { token: localStorage.getItem('token') } });
+        const addUnreadNotification = (data) => {
+            const notification = normalizeNotification(data);
+            if (notification._id && seenNotificationIdsRef.current.has(notification._id)) return;
+            if (notification._id) seenNotificationIdsRef.current.add(notification._id);
+            if (!notification.read) {
+                setUnreadCount((current) => current + 1);
+            }
+        };
+
+        const handleNotificationsChanged = () => {
+            loadUnreadCount();
+        };
+
+        socket.emit('join', user._id);
+        socket.on('notification', addUnreadNotification);
+        socket.on('new-notification', addUnreadNotification);
+        socket.on('enrollment-cancelled', addUnreadNotification);
+        window.addEventListener('notifications:changed', handleNotificationsChanged);
+
+        return () => {
+            mounted = false;
+            socket.off('notification', addUnreadNotification);
+            socket.off('new-notification', addUnreadNotification);
+            socket.off('enrollment-cancelled', addUnreadNotification);
+            socket.disconnect();
+            window.removeEventListener('notifications:changed', handleNotificationsChanged);
+        };
+    }, [user]);
 
     const handleLogout = async () => {
         try {
@@ -79,6 +144,11 @@ const Navbar = () => {
                             <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
                             <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
                         </svg>
+                        {unreadCount > 0 && (
+                            <span className="notification-unread-badge">
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                            </span>
+                        )}
                     </Link>
 
                     {/* User Avatar Dropdown */}

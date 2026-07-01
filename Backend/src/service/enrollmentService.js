@@ -77,17 +77,17 @@ const getEnrollmentById = async (id) => {
   return enrollmentDto.toEnrollmentResponse(enrollment);
 };
 
-const updateEnrollmentProgress = async (enrollmentId, progress) => {
+const startLearning = async ({ enrollmentId, userId }) => {
   const enrollment = await enrollmentRepository.findById(enrollmentId);
   if (!enrollment) throw new Error('ENROLLMENT_NOT_FOUND');
+  if (String(enrollment.user) !== String(userId)) throw new Error('ENROLLMENT_FORBIDDEN');
+  if (!enrollment.class) throw new Error('CLASS_NOT_ASSIGNED');
 
-  enrollment.progress = progress;
-  enrollment.status = enrollment.status === 'COMPLETED'
-    ? 'COMPLETED'
-    : enrollment.status === 'WAITING_CLASS'
-      ? 'WAITING_CLASS'
-      : 'LEARNING';
-  await enrollment.save();
+  if (enrollment.status === 'ASSIGNED_CLASS') {
+    enrollment.status = 'LEARNING';
+    await enrollment.save();
+  }
+
   await enrollment.populate('course', 'title price');
   await enrollment.populate({
     path: 'class',
@@ -105,7 +105,6 @@ const refreshEnrollmentProgress = async (userId, courseId, classId = null) => {
     : await calculateCourseProgress(userId, courseId);
 
   if (enrollment) {
-    enrollment.progress = courseProgress.progress;
     enrollment.status = enrollment.status === 'COMPLETED'
       ? 'COMPLETED'
       : enrollment.status === 'WAITING_CLASS'
@@ -141,7 +140,6 @@ const approveCourseCompletion = async ({ enrollmentId, teacherId, note = '' }) =
   const classItem = await ClassModel.findOne({ _id: enrollment.class, teacher: teacherId });
   if (!classItem) throw new Error('CLASS_NOT_ASSIGNED_TO_TEACHER');
 
-  enrollment.progress = 100;
   enrollment.status = 'COMPLETED';
   enrollment.completedBy = teacherId;
   enrollment.completedAt = new Date();
@@ -164,7 +162,7 @@ module.exports = {
   createEnrollment,
   assignStudentToClass,
   getEnrollmentById,
-  updateEnrollmentProgress,
+  startLearning,
   refreshEnrollmentProgress,
   calculateCourseProgress,
   calculateClassProgress,

@@ -29,7 +29,7 @@ class ClassRepository extends BaseRepository {
   findJoinablePaidClasses(courseId) {
     return this.model.find({
       course: courseId,
-      status: { $in: ['OPEN', 'IN_PROGRESS'] },
+      status: 'OPEN',
       $expr: { $lt: ['$currentStudents', '$maxStudents'] }
     }).sort({ startDate: 1 });
   }

@@ -22,6 +22,7 @@ export default function Notifications() {
       try {
         const res = await notificationService.listNotifications();
         setItems(res.data.notifications);
+        window.dispatchEvent(new Event('notifications:changed'));
       } catch (e) {
         console.error(e);
       }
@@ -72,6 +73,7 @@ export default function Notifications() {
       setItems((s) =>
         s.map((x) => (x._id === id ? { ...x, read: true } : x))
       );
+      window.dispatchEvent(new Event('notifications:changed'));
     } catch (e) {
       console.error(e);
     }

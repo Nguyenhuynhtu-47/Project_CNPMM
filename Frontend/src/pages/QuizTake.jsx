@@ -90,7 +90,6 @@ export default function QuizTake() {
   const safeCurrentQuestionIndex = questions.length ? Math.min(currentQuestionIndex, questions.length - 1) : 0;
   const currentQuestion = questions[safeCurrentQuestionIndex];
   const answeredCount = Object.keys(answers).filter((key) => answers[key] !== undefined && answers[key] !== '').length;
-  const progressPercent = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0;
   const isFirstQuestion = safeCurrentQuestionIndex === 0;
   const isLastQuestion = safeCurrentQuestionIndex === questions.length - 1;
   const currentAnswer = currentQuestion ? answers[currentQuestion._id] || '' : '';
@@ -155,13 +154,10 @@ export default function QuizTake() {
         )}
 
         {!submittedResult && questions.length > 0 && (
-          <div className="quiz-progress-card">
+          <div className="quiz-question-nav-card">
             <div className="d-flex justify-content-between gap-3">
               <span>Question {safeCurrentQuestionIndex + 1} of {questions.length}</span>
               <span>{answeredCount}/{questions.length} answered</span>
-            </div>
-            <div className="progress mt-2">
-              <div className="progress-bar" style={{ width: `${progressPercent}%` }} aria-valuenow={progressPercent} aria-valuemin="0" aria-valuemax="100" />
             </div>
             <div className="quiz-question-dots" aria-label="Question navigation">
               {questions.map((question, index) => (

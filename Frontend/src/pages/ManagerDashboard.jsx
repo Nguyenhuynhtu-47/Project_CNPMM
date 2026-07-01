@@ -16,6 +16,7 @@ import { getAllEnrollments } from '../services/enrollment';
 import { getAllOrders } from '../services/order';
 import { getStatisticsOverview } from '../services/statistics';
 import PaginationControls from '../components/PaginationControls';
+import { getEnrollmentStatusLabel } from '../utils/enrollmentStatus';
 import { createPagination } from '../utils/pagination';
 
 const today = new Date().toISOString().slice(0, 10);
@@ -402,12 +403,12 @@ const ManagerDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Completion rate & top teachers */}
+                    {/* Teacher-approved completion rate & top teachers */}
                     <div className="col-lg-4 d-flex flex-column gap-4">
                         <div className="card border-0 shadow-sm rounded-4 p-4 bg-gradient" style={{ background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(20, 184, 166, 0.05) 100%)' }}>
-                            <h4 className="fw-bold text-dark mb-2 fs-5">Completion rate</h4>
+                            <h4 className="fw-bold text-dark mb-2 fs-5">Approved completion</h4>
                             <div className="display-4 fw-bold text-primary">{stats?.completionRate || 0}%</div>
-                            <p className="text-muted mb-0 small">Average enrollment progress in selected period.</p>
+                            <p className="text-muted mb-0 small">Enrollments marked completed by teachers in selected period.</p>
                         </div>
                         <div className="card border-0 shadow-sm rounded-4 p-4 flex-grow-1">
                             <h4 className="fw-bold text-dark mb-3 fs-5">Top teachers</h4>
@@ -510,7 +511,6 @@ const ManagerDashboard = () => {
                                             <th>Course</th>
                                             <th>Class</th>
                                             <th>Status</th>
-                                            <th className="pe-4">Progress</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -519,8 +519,7 @@ const ManagerDashboard = () => {
                                                 <td className="ps-4 fw-semibold text-dark">{enrollment.user?.fullName || enrollment.user?.email || '-'}</td>
                                                 <td>{enrollment.course?.title || '-'}</td>
                                                 <td><span className="font-monospace fw-bold text-secondary">{enrollment.class?.code || '-'}</span></td>
-                                                <td><span className="badge text-bg-light px-2.5 py-1.5">{enrollment.status}</span></td>
-                                                <td className="pe-4 fw-bold text-primary">{enrollment.progress || 0}%</td>
+                                                <td><span className="badge text-bg-light px-2.5 py-1.5">{getEnrollmentStatusLabel(enrollment.status)}</span></td>
                                             </tr>
                                         ))}
                                     </tbody>

@@ -11,7 +11,6 @@ const toEnrollmentResponse = (enrollment) => {
     class: item.class,
     status: item.status,
     enrolledAt: item.enrolledAt,
-    progress: item.progress,
     completedBy: item.completedBy,
     completedAt: item.completedAt,
     completionNote: item.completionNote,

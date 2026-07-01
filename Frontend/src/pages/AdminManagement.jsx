@@ -10,6 +10,7 @@ import { getAllBanners as loadBanners, createBanner as addBanner, deleteBanner a
 import { createCoupon, getCoupons, updateCoupon } from '../services/coupon';
 import CourseImage from '../components/CourseImage';
 import PaginationControls from '../components/PaginationControls';
+import { getEnrollmentStatusLabel } from '../utils/enrollmentStatus';
 import { createPagination } from '../utils/pagination';
 
 const emptyCourse = { title: '', description: '', price: '', category: '', durationWeeks: 0, sessionCount: 0, status: 'PUBLISHED' };
@@ -836,7 +837,6 @@ const AdminManagement = () => {
                                                             <th>Email</th>
                                                             <th>Course</th>
                                                             <th>Status</th>
-                                                            <th className="pe-3">Progress</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>{pagedClassStudents.items.map((enrollment) => (
@@ -844,8 +844,7 @@ const AdminManagement = () => {
                                                             <td className="ps-3 fw-semibold text-dark">{enrollment.user?.fullName || '-'}</td>
                                                             <td>{enrollment.user?.email || '-'}</td>
                                                             <td>{enrollment.course?.title || '-'}</td>
-                                                            <td><span className="badge text-bg-light px-2 py-1">{enrollment.status}</span></td>
-                                                            <td className="pe-3 fw-bold text-primary">{enrollment.progress || 0}%</td>
+                                                            <td><span className="badge text-bg-light px-2 py-1">{getEnrollmentStatusLabel(enrollment.status)}</span></td>
                                                         </tr>
                                                     ))}</tbody>
                                                 </table>
@@ -965,7 +964,7 @@ const AdminManagement = () => {
                                 </div>
                                 <div className="col-md-2">
                                     <label className="form-label small fw-semibold text-dark">Discount Type</label>
-                                    <select className="form-select bg-white py-2 rounded-3" value={couponForm.discountType} onChange={(e) => setCouponForm({ ...couponForm, discountType: e.target.value })}>
+                                    <select className="form-select bg-white py-2 rounded-3" value={couponForm.discountType} onChange={(e) => setCouponForm({ ...couponForm, discountType: e.target.value, maxDiscountAmount: e.target.value === 'FIXED' ? '' : couponForm.maxDiscountAmount })}>
                                         <option value="PERCENT">Percent</option>
                                         <option value="FIXED">Fixed amount</option>
                                     </select>
@@ -974,10 +973,12 @@ const AdminManagement = () => {
                                     <label className="form-label small fw-semibold text-dark">Value</label>
                                     <input className="form-control bg-white py-2 rounded-3" type="number" min="0" placeholder="Discount" value={couponForm.discountValue} onChange={(e) => setCouponForm({ ...couponForm, discountValue: e.target.value })} required />
                                 </div>
-                                <div className="col-md-3">
-                                    <label className="form-label small fw-semibold text-dark">Max Discount (VND)</label>
-                                    <input className="form-control bg-white py-2 rounded-3" type="number" min="0" placeholder="Max cap" value={couponForm.maxDiscountAmount} onChange={(e) => setCouponForm({ ...couponForm, maxDiscountAmount: e.target.value })} />
-                                </div>
+                                {couponForm.discountType === 'PERCENT' && (
+                                    <div className="col-md-3">
+                                        <label className="form-label small fw-semibold text-dark">Max Discount (VND)</label>
+                                        <input className="form-control bg-white py-2 rounded-3" type="number" min="0" placeholder="Max cap" value={couponForm.maxDiscountAmount} onChange={(e) => setCouponForm({ ...couponForm, maxDiscountAmount: e.target.value })} />
+                                    </div>
+                                )}
                                 <div className="col-md-3">
                                     <label className="form-label small fw-semibold text-dark">Min Order (VND)</label>
                                     <input className="form-control bg-white py-2 rounded-3" type="number" min="0" placeholder="Min order" value={couponForm.minOrderAmount} onChange={(e) => setCouponForm({ ...couponForm, minOrderAmount: e.target.value })} />
@@ -1052,7 +1053,7 @@ const AdminManagement = () => {
                     {/* TAB: Notifications */}
                     {activeTab === 'notifications' && (
                         <section className="card border-0 shadow-sm rounded-4 p-4">
-                            <h4 className="fw-bold text-dark mb-3 fs-5">Broadcast notification</h4>
+                            <h4 className="fw-bold text-dark mb-3 fs-5">Broadcast notification by role</h4>
                             <form className="row g-3 mb-4 p-3 bg-light rounded-4 border" onSubmit={submitNotification}>
                                 <div className="col-md-3">
                                     <label className="form-label small fw-semibold text-dark">Title</label>
@@ -1063,7 +1064,7 @@ const AdminManagement = () => {
                                     <input className="form-control bg-white py-2 rounded-3" placeholder="Message details" value={notificationForm.message} onChange={(e) => setNotificationForm({ ...notificationForm, message: e.target.value })} />
                                 </div>
                                 <div className="col-md-2">
-                                    <label className="form-label small fw-semibold text-dark">Role Filter</label>
+                                    <label className="form-label small fw-semibold text-dark">Recipient role</label>
                                     <select className="form-select bg-white py-2 rounded-3" value={notificationForm.role} onChange={(e) => setNotificationForm({ ...notificationForm, role: e.target.value })}>
                                         <option value="">All roles</option>
                                         {roleOptions.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}

@@ -5,18 +5,46 @@ import { getMyAttendance } from '../services/attendance';
 import { getMyCertificates, getCertificatePdfUrl } from '../services/certificate';
 import { getChaptersByClass } from '../services/chapter';
 import { createClassComment, getClassComments } from '../services/discussion';
-import { getEnrollments } from '../services/enrollment';
+import { getEnrollments, startLearning } from '../services/enrollment';
 import { getLessonsByChapter } from '../services/lesson';
 import { getQuizzesByClass } from '../services/quiz';
 import { createReview, getCourseReviews } from '../services/review';
 import { addToWishlist, getWishlist, removeFromWishlist } from '../services/wishlist';
 import PaginationControls from '../components/PaginationControls';
+import { getEnrollmentStatusBadgeClass, getEnrollmentStatusLabel } from '../utils/enrollmentStatus';
 import { createPagination } from '../utils/pagination';
 
 const getId = (value) => value?._id || value || '';
 const formatAttendanceDate = (item) => {
     const value = item.attendanceDate || item.attendedAt || item.createdAt;
     return value ? new Date(value).toLocaleDateString('vi-VN') : '-';
+};
+
+const getYouTubeEmbedUrl = (url) => {
+    if (!url) return '';
+    try {
+        const parsedUrl = new URL(url);
+        const host = parsedUrl.hostname.replace(/^www\./, '');
+        let videoId = '';
+
+        if (host === 'youtube.com' || host === 'm.youtube.com') {
+            if (parsedUrl.pathname === '/watch') {
+                videoId = parsedUrl.searchParams.get('v') || '';
+            } else if (parsedUrl.pathname.startsWith('/embed/')) {
+                videoId = parsedUrl.pathname.split('/embed/')[1]?.split('/')[0] || '';
+            } else if (parsedUrl.pathname.startsWith('/shorts/')) {
+                videoId = parsedUrl.pathname.split('/shorts/')[1]?.split('/')[0] || '';
+            }
+        }
+
+        if (host === 'youtu.be') {
+            videoId = parsedUrl.pathname.replace('/', '').split('/')[0] || '';
+        }
+
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
+    } catch {
+        return '';
+    }
 };
 
 const StudentLearning = () => {
@@ -141,6 +169,28 @@ const StudentLearning = () => {
         return () => window.clearTimeout(timer);
     }, [loadCourseDetails]);
 
+    useEffect(() => {
+        if (!selectedEnrollment?._id || selectedEnrollment.status !== 'ASSIGNED_CLASS') return undefined;
+
+        let cancelled = false;
+        const timer = window.setTimeout(async () => {
+            try {
+                const response = await startLearning(selectedEnrollment._id);
+                const updatedEnrollment = response.data.enrollment;
+                if (!cancelled && updatedEnrollment?._id) {
+                    setEnrollments((current) => current.map((item) => (item._id === updatedEnrollment._id ? updatedEnrollment : item)));
+                }
+            } catch {
+                // Keep the current status visible if the transition fails.
+            }
+        }, 0);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
+    }, [selectedEnrollment?._id, selectedEnrollment?.status]);
+
     const selectedCourseTitle = selectedEnrollment?.course?.title || 'Selected course';
     const isWishlisted = courseId ? wishlistCourseIds.has(courseId) : false;
     const paginate = (key, items) => createPagination(items, pages[key] || 1, 5);
@@ -236,6 +286,19 @@ const StudentLearning = () => {
         }
 
         if (type === 'VIDEO') {
+            const youtubeEmbedUrl = getYouTubeEmbedUrl(url);
+            if (youtubeEmbedUrl) {
+                return (
+                    <iframe
+                        className="w-100 h-100 d-block rounded-3 border-0"
+                        src={youtubeEmbedUrl}
+                        title={activeLesson.title || 'YouTube lesson video'}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        style={{ minHeight: '420px', maxHeight: '480px' }}
+                    />
+                );
+            }
             return <video className="w-100 h-100 d-block rounded-3" src={url} controls style={{ maxHeight: '480px', objectFit: 'contain' }} />;
         }
 
@@ -329,13 +392,9 @@ const StudentLearning = () => {
                                 </select>
 
                                 <div className="mt-3">
-                                    <div className="d-flex justify-content-between align-items-center mb-1">
-                                        <span className="text-muted small" style={{ fontSize: '0.72rem' }}>Progress:</span>
-                                        <span className="fw-bold text-primary small" style={{ fontSize: '0.72rem' }}>{selectedEnrollment?.progress || 0}%</span>
-                                    </div>
-                                    <div className="progress rounded-pill" style={{ height: '6px' }}>
-                                        <div className="progress-bar" role="progressbar" style={{ width: `${selectedEnrollment?.progress || 0}%` }}></div>
-                                    </div>
+                                    <span className={`badge px-2.5 py-1.5 rounded-2 fw-semibold ${getEnrollmentStatusBadgeClass(selectedEnrollment?.status)}`}>
+                                        {getEnrollmentStatusLabel(selectedEnrollment?.status || 'LEARNING')}
+                                    </span>
                                 </div>
 
                                 <button className="btn btn-outline-danger btn-sm py-1.5 rounded-3 fw-semibold w-100 mt-3" type="button" onClick={handleToggleWishlist}>
@@ -618,7 +677,7 @@ const StudentLearning = () => {
                                                     </form>
                                                 ) : (
                                                     <div className="alert alert-info py-2.5 small mb-4">
-                                                        You can review this course after completing all lessons.
+                                                        You can review this course after your teacher approves course completion.
                                                     </div>
                                                 )}
 

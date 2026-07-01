@@ -26,7 +26,7 @@ router.post(
   [
     body('code').notEmpty().withMessage('Coupon code is required'),
     body('name').notEmpty().withMessage('Coupon name is required'),
-    body('discountType').isIn(['PERCENT', 'FIXED']).withMessage('Invalid discount type'),
+    body('discountType').isIn(['PERCENT', 'FIXED', 'FIXED_AMOUNT', 'AMOUNT']).withMessage('Invalid discount type'),
     body('discountValue').isFloat({ min: 0 }).withMessage('Discount value is required'),
     validate
   ],

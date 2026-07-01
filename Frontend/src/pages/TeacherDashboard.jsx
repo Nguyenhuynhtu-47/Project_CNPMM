@@ -4,9 +4,11 @@ import { getAttendance, markAttendance } from '../services/attendance';
 import { createChapter, getChaptersByClass } from '../services/chapter';
 import { getClassComments, pinClassComment } from '../services/discussion';
 import { createLesson, deleteLesson, deleteLessonMaterial, getLessonsByChapter, reorderLessons, uploadLessonMedia } from '../services/lesson';
+import { sendClassNotification } from '../services/notification';
 import { createQuiz, getQuizzesByClass, updateQuiz } from '../services/quiz';
 import { approveCourseCompletion, getAssignmentAnalytics, getTeacherClasses, getTeacherClassStudents } from '../services/teacher';
 import PaginationControls from '../components/PaginationControls';
+import { getEnrollmentStatusBadgeClass, getEnrollmentStatusLabel } from '../utils/enrollmentStatus';
 import { createPagination } from '../utils/pagination';
 
 const getId = (value) => value?._id || value || '';
@@ -72,6 +74,7 @@ const TeacherDashboard = () => {
     const [editingQuizId, setEditingQuizId] = useState('');
     const [gradeForm, setGradeForm] = useState({});
     const [attendanceForm, setAttendanceForm] = useState({ student: '', attended: true, attendanceDate: getTodayInputValue(), note: '' });
+    const [classNotificationForm, setClassNotificationForm] = useState({ title: '', message: '' });
     const [pages, setPages] = useState({});
     const [activeTab, setActiveTab] = useState('classes');
     const [loading, setLoading] = useState(true);
@@ -460,6 +463,23 @@ const TeacherDashboard = () => {
         }
     };
 
+    const handleSendClassNotification = async (event) => {
+        event.preventDefault();
+        if (!classId || !classNotificationForm.title.trim()) return;
+        setError('');
+        setSuccess('');
+        try {
+            const response = await sendClassNotification(classId, {
+                title: classNotificationForm.title.trim(),
+                message: classNotificationForm.message.trim()
+            });
+            setClassNotificationForm({ title: '', message: '' });
+            setSuccess(`Notification sent to ${response.data.count || 0} students.`);
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || 'Cannot send notification.');
+        }
+    };
+
     const paginate = (key, items, limit = 5) => createPagination(items, pages[key] || 1, limit);
     const setPage = (key, page) => setPages((current) => ({ ...current, [key]: page }));
     const pagedClassEnrollments = paginate('classEnrollments', classEnrollments, 10);
@@ -475,6 +495,7 @@ const TeacherDashboard = () => {
         ['assignments', 'Assignments'],
         ['quizzes', 'Quizzes'],
         ['attendance', 'Attendance'],
+        ['notifications', 'Notifications'],
         ['discussion', 'Discussion']
     ];
 
@@ -591,7 +612,6 @@ const TeacherDashboard = () => {
                                                 <th className="ps-3">Name</th>
                                                 <th>Email</th>
                                                 <th>Phone</th>
-                                                <th>Progress</th>
                                                 <th>Status</th>
                                                 <th className="pe-3">Actions</th>
                                             </tr>
@@ -606,16 +626,8 @@ const TeacherDashboard = () => {
                                                         <td>{student.email || '-'}</td>
                                                         <td>{student.phone || '-'}</td>
                                                         <td>
-                                                            <div className="d-flex align-items-center gap-2">
-                                                                <span className="fw-bold text-primary small" style={{ minWidth: '32px' }}>{enrollment.progress || 0}%</span>
-                                                                <div className="progress rounded-pill flex-grow-1" style={{ height: '6px', minWidth: '60px' }}>
-                                                                    <div className="progress-bar" role="progressbar" style={{ width: `${enrollment.progress || 0}%` }}></div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td>
-                                                            <span className={`badge px-2.5 py-1.5 rounded-2 ${completed ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}`}>
-                                                                {completed ? 'COMPLETED' : enrollment.status}
+                                                            <span className={`badge px-2.5 py-1.5 rounded-2 ${getEnrollmentStatusBadgeClass(enrollment.status)}`}>
+                                                                {getEnrollmentStatusLabel(enrollment.status)}
                                                             </span>
                                                             {enrollment.completedAt && <div className="small text-muted mt-1 font-monospace">{new Date(enrollment.completedAt).toLocaleDateString('vi-VN')}</div>}
                                                         </td>
@@ -691,7 +703,7 @@ const TeacherDashboard = () => {
                                             </div>
                                             <div className="col-12">
                                                 <label className="form-label small fw-semibold text-dark">Content Resource URL</label>
-                                                <input className="form-control bg-light border-0 py-2 rounded-3" placeholder="Content URL (e.g. video file link)" value={lessonForm.contentUrl} onChange={(event) => setLessonForm((current) => ({ ...current, contentUrl: event.target.value }))} />
+                                                <input className="form-control bg-light border-0 py-2 rounded-3" placeholder="Paste YouTube link or direct resource URL" value={lessonForm.contentUrl} onChange={(event) => setLessonForm((current) => ({ ...current, contentUrl: event.target.value }))} />
                                             </div>
                                             <div className="col-12">
                                                 <label className="form-label small fw-semibold text-dark">Upload Material File</label>
@@ -702,7 +714,7 @@ const TeacherDashboard = () => {
                                                     accept=".mp4,.webm,.mp3,.pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png"
                                                     onChange={(event) => setLessonFile(event.target.files?.[0] || null)}
                                                 />
-                                                <small className="text-muted">Supported: video, audio, PDF, DOC/DOCX, PPT/PPTX, JPG, PNG. You can use either URL or upload a file.</small>
+                                                <small className="text-muted">For VIDEO, paste a YouTube link or upload MP4/WEBM. Documents are saved locally and opened only from Open / Download.</small>
                                             </div>
                                             <div className="col-12">
                                                 <label className="form-label small fw-semibold text-dark">Description</label>
@@ -1046,6 +1058,49 @@ const TeacherDashboard = () => {
                                     </table>
                                 </div>
                                 {attendance.length > 0 && <PaginationControls pagination={pagedAttendance.pagination} onPageChange={(page) => setPage('attendance', page)} itemLabel="attendance records" />}
+                            </section>
+                        )}
+
+                        {/* TAB: notifications */}
+                        {activeTab === 'notifications' && (
+                            <section className="card border-0 shadow-sm rounded-4 p-4">
+                                <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+                                    <div>
+                                        <h4 className="fw-bold text-dark mb-1">Class notifications</h4>
+                                        <p className="text-muted small mb-0">
+                                            Send realtime notifications to students in {selectedClass?.code || 'the selected class'}.
+                                        </p>
+                                    </div>
+                                    <span className="badge bg-primary-subtle text-primary rounded-pill px-3 py-2">
+                                        {students.length} students
+                                    </span>
+                                </div>
+                                <form className="row g-3 p-3 bg-light rounded-4 border" onSubmit={handleSendClassNotification}>
+                                    <div className="col-md-4">
+                                        <label className="form-label small fw-semibold text-dark mb-1">Title</label>
+                                        <input
+                                            className="form-control bg-white py-2 rounded-3"
+                                            placeholder="Notification title"
+                                            value={classNotificationForm.title}
+                                            onChange={(event) => setClassNotificationForm((current) => ({ ...current, title: event.target.value }))}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="col-md-6">
+                                        <label className="form-label small fw-semibold text-dark mb-1">Message</label>
+                                        <input
+                                            className="form-control bg-white py-2 rounded-3"
+                                            placeholder="Message to students..."
+                                            value={classNotificationForm.message}
+                                            onChange={(event) => setClassNotificationForm((current) => ({ ...current, message: event.target.value }))}
+                                        />
+                                    </div>
+                                    <div className="col-md-2 d-flex align-items-end">
+                                        <button className="btn btn-primary w-100 py-2 rounded-3 fw-bold auth-primary-btn" type="submit" disabled={!classId || students.length === 0}>
+                                            Send
+                                        </button>
+                                    </div>
+                                </form>
                             </section>
                         )}
 

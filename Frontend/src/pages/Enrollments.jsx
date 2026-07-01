@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import CourseImage from '../components/CourseImage';
 import PaginationControls from '../components/PaginationControls';
 import { getEnrollments } from '../services/enrollment';
+import { getEnrollmentStatusBadgeClass, getEnrollmentStatusLabel } from '../utils/enrollmentStatus';
 import { createPagination } from '../utils/pagination';
 
 const Enrollments = () => {
@@ -62,10 +63,7 @@ const Enrollments = () => {
                             </div>
                         </div>
                     ) : (
-                        visibleEnrollments.map((enrollment) => {
-                            const isCompleted = enrollment.status === 'COMPLETED';
-                            const isFinishedProgress = Number(enrollment.progress || 0) >= 100;
-                            return (
+                        visibleEnrollments.map((enrollment) => (
                                 <div className="col-12" key={enrollment._id}>
                                     <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
                                         <div className="row g-0">
@@ -77,8 +75,8 @@ const Enrollments = () => {
                                                     <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
                                                         <h5 className="fw-bold text-dark mb-0">{enrollment.course?.title}</h5>
                                                         <div className="d-flex gap-2">
-                                                            <span className={`badge px-2.5 py-1.5 rounded-2 fw-semibold ${isCompleted ? 'bg-success-subtle text-success' : 'bg-primary-subtle text-primary'}`}>
-                                                                {enrollment.status}
+                                                            <span className={`badge px-2.5 py-1.5 rounded-2 fw-semibold ${getEnrollmentStatusBadgeClass(enrollment.status)}`}>
+                                                                {getEnrollmentStatusLabel(enrollment.status)}
                                                             </span>
                                                             {enrollment.class ? (
                                                                 <span className="badge bg-secondary-subtle text-secondary px-2.5 py-1.5 rounded-2 font-monospace fw-bold">
@@ -91,14 +89,9 @@ const Enrollments = () => {
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <p className="text-muted small mb-3">Review lectures, finish assignments, and verify your certification progress.</p>
+                                                    <p className="text-muted small mb-3">Review lectures, finish assignments, and wait for teacher completion approval.</p>
                                                 </div>
                                                 <div>
-                                                    {!isCompleted && isFinishedProgress && (
-                                                        <p className="text-muted small mb-3 fw-semibold">
-                                                            * Waiting for teacher completion approval.
-                                                        </p>
-                                                    )}
                                                     {enrollment.completedAt && (
                                                         <p className="text-success small mb-3 fw-semibold">
                                                             Completed at: {new Date(enrollment.completedAt).toLocaleDateString('vi-VN')}
@@ -107,13 +100,9 @@ const Enrollments = () => {
 
                                                     <div className="row align-items-center g-3">
                                                         <div className="col-sm-8">
-                                                            <div className="d-flex justify-content-between align-items-center mb-1">
-                                                                <span className="text-muted small fw-semibold">Course Progress</span>
-                                                                <span className="fw-bold text-dark small">{enrollment.progress || 0}%</span>
-                                                            </div>
-                                                            <div className="progress rounded-pill" style={{ height: '8px' }}>
-                                                                <div className={`progress-bar ${isCompleted ? 'bg-success' : ''}`} role="progressbar" style={{ width: `${enrollment.progress || 0}%` }}></div>
-                                                            </div>
+                                                            <span className={`badge px-3 py-2 rounded-3 fw-semibold ${getEnrollmentStatusBadgeClass(enrollment.status)}`}>
+                                                                {getEnrollmentStatusLabel(enrollment.status)}
+                                                            </span>
                                                         </div>
                                                         <div className="col-sm-4 d-flex justify-content-sm-end">
                                                             <Link className="btn btn-primary px-4 py-2 rounded-3 fw-bold auth-primary-btn w-100 text-center" to="/my-learning">
@@ -126,8 +115,7 @@ const Enrollments = () => {
                                         </div>
                                     </div>
                                 </div>
-                            );
-                        })
+                        ))
                     )}
                 </div>
             )}

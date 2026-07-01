@@ -76,15 +76,14 @@ const Login = () => {
                     <span className="eyebrow">English Course Hub</span>
                     <h1>Master English with a smarter learning journey.</h1>
                     <p>
-                        Join interactive classes, track your progress, and manage every lesson in one elegant English
-                        learning workspace.
+                        Join interactive classes, follow teacher-guided lessons, and manage your English learning workspace.
                     </p>
 
                     <div className="learning-visual" aria-hidden="true">
                         <div className="learning-visual__card learning-visual__card--primary">
                             <span>Speaking class</span>
-                            <strong>95%</strong>
-                            <small>Weekly progress</small>
+                            <strong>Live</strong>
+                            <small>Teacher guided</small>
                         </div>
                         <div className="learning-visual__book">
                             <span>EN</span>
@@ -103,7 +102,7 @@ const Login = () => {
                         </div>
                         <div>
                             <strong>Course management</strong>
-                            <span>Access your dashboard, enrollments, and progress after signing in.</span>
+                            <span>Access your dashboard, enrollments, and class materials after signing in.</span>
                         </div>
                     </div>
                 </div>

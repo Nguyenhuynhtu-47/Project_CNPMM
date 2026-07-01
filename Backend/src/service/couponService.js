@@ -2,6 +2,11 @@ const Coupon = require('../models/Coupon');
 const Order = require('../models/Order');
 
 const normalizeCode = (code = '') => String(code).trim().toUpperCase();
+const normalizeDiscountType = (type = 'PERCENT') => {
+  const normalizedType = String(type).trim().toUpperCase();
+  if (['FIXED', 'FIXED_AMOUNT', 'AMOUNT'].includes(normalizedType)) return 'FIXED';
+  return 'PERCENT';
+};
 
 const isCouponInWindow = (coupon, now = new Date()) => {
   if (!coupon.active) return false;
@@ -13,9 +18,14 @@ const isCouponInWindow = (coupon, now = new Date()) => {
 const calculateDiscount = (coupon, amount) => {
   if (!coupon || amount <= 0) return 0;
 
-  const rawDiscount = coupon.discountType === 'PERCENT'
-    ? Math.floor(amount * (coupon.discountValue / 100))
-    : Number(coupon.discountValue || 0);
+  const discountType = normalizeDiscountType(coupon.discountType);
+  const discountValue = Number(coupon.discountValue || 0);
+
+  if (discountType === 'FIXED') {
+    return Math.min(Math.max(discountValue, 0), amount);
+  }
+
+  const rawDiscount = Math.floor(amount * (discountValue / 100));
 
   const cappedDiscount = coupon.maxDiscountAmount > 0
     ? Math.min(rawDiscount, coupon.maxDiscountAmount)
@@ -60,14 +70,16 @@ const listCoupons = async () => {
 const createCoupon = async (data) => {
   return Coupon.create({
     ...data,
-    code: normalizeCode(data.code)
+    code: normalizeCode(data.code),
+    discountType: normalizeDiscountType(data.discountType)
   });
 };
 
 const updateCoupon = async (id, data) => {
   const payload = { ...data };
   if (payload.code) payload.code = normalizeCode(payload.code);
-  return Coupon.findByIdAndUpdate(id, payload, { new: true });
+  if (payload.discountType) payload.discountType = normalizeDiscountType(payload.discountType);
+  return Coupon.findByIdAndUpdate(id, payload, { new: true, runValidators: true });
 };
 
 const countCouponUsage = async (couponId) => {
@@ -81,6 +93,7 @@ module.exports = {
   createCoupon,
   listCoupons,
   normalizeCode,
+  normalizeDiscountType,
   updateCoupon,
   validateCoupon
 };

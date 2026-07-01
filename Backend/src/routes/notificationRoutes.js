@@ -1,5 +1,5 @@
 const express = require('express');
-const { body } = require('express-validator');
+const { body, param } = require('express-validator');
 const router = express.Router();
 const notificationController = require('../controllers/notificationController');
 const validate = require('../middleware/validateMiddleware');
@@ -19,6 +19,17 @@ router.post(
     validate
   ],
   notificationController.broadcastNotification
+);
+router.post(
+  '/classes/:classId',
+  authenticateToken,
+  [
+    param('classId').isMongoId().withMessage('Class id is invalid'),
+    body('title').notEmpty().withMessage('Title is required'),
+    body('message').optional().isString(),
+    validate
+  ],
+  notificationController.sendClassNotification
 );
 router.patch('/:id/read', authenticateToken, notificationController.markRead);
 

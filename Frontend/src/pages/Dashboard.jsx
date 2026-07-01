@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getEnrollments } from '../services/enrollment';
+import { getMyLoyalty } from '../services/loyalty';
 import { getOrders } from '../services/order';
+import { getEnrollmentStatusBadgeClass, getEnrollmentStatusLabel } from '../utils/enrollmentStatus';
 
 const Dashboard = () => {
     const { user } = useAuth();
     const [enrollments, setEnrollments] = useState([]);
     const [orders, setOrders] = useState([]);
+    const [loyalty, setLoyalty] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -16,9 +19,10 @@ const Dashboard = () => {
             setLoading(true);
             setError(null);
             try {
-                const [enrollmentRes, orderRes] = await Promise.all([getEnrollments(), getOrders()]);
+                const [enrollmentRes, orderRes, loyaltyRes] = await Promise.all([getEnrollments(), getOrders(), getMyLoyalty()]);
                 setEnrollments(enrollmentRes.data.enrollments || []);
                 setOrders(orderRes.data.orders || []);
+                setLoyalty(loyaltyRes.data || null);
             } catch {
                 setError('Không thể tải bảng điều khiển.');
             } finally {
@@ -30,9 +34,10 @@ const Dashboard = () => {
     }, []);
 
     // Calculate metrics
-    const completedCoursesCount = enrollments.filter(e => e.status === 'COMPLETED' || e.progress === 100).length;
-    const avgProgress = enrollments.length ? Math.round(enrollments.reduce((sum, e) => sum + (e.progress || 0), 0) / enrollments.length) : 0;
-    const lastActiveEnrollment = enrollments.find(e => (e.progress || 0) < 100) || enrollments[0];
+    const completedCoursesCount = enrollments.filter((enrollment) => enrollment.status === 'COMPLETED').length;
+    const lastActiveEnrollment = enrollments.find((enrollment) => enrollment.status !== 'COMPLETED' && enrollment.status !== 'CANCELLED') || enrollments[0];
+    const loyaltyBalance = Number(loyalty?.balance || 0);
+    const loyaltyValue = loyaltyBalance * Number(loyalty?.pointValueVnd || 0);
 
     return (
         <div className="container-fluid px-0 py-3">
@@ -97,14 +102,16 @@ const Dashboard = () => {
                             <div className="card border-0 shadow-sm rounded-4 p-4 d-flex flex-row align-items-center gap-3 h-100">
                                 <div className="bg-info-subtle p-3 rounded-4 flex-shrink-0 d-flex align-items-center justify-content-center text-info" style={{ width: '52px', height: '52px' }}>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <line x1="18" y1="20" x2="18" y2="10" />
-                                        <line x1="12" y1="20" x2="12" y2="4" />
-                                        <line x1="6" y1="20" x2="6" y2="14" />
+                                        <circle cx="12" cy="12" r="8" />
+                                        <path d="M12 8v8M8 12h8" />
                                     </svg>
                                 </div>
                                 <div>
-                                    <span className="text-muted small fw-semibold text-uppercase" style={{ letterSpacing: '0.04em', fontSize: '0.7rem' }}>Avg Progress</span>
-                                    <strong className="text-dark d-block fs-4 mt-0.5 fw-bold">{avgProgress}%</strong>
+                                    <span className="text-muted small fw-semibold text-uppercase" style={{ letterSpacing: '0.04em', fontSize: '0.7rem' }}>Loyalty Points</span>
+                                    <strong className="text-dark d-block fs-4 mt-0.5 fw-bold">{loyaltyBalance}</strong>
+                                    <small className="text-muted d-block" style={{ fontSize: '0.72rem' }}>
+                                        {loyaltyValue.toLocaleString('vi-VN')} VND value
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -141,15 +148,10 @@ const Dashboard = () => {
 
                                     <div className="p-4 bg-light rounded-4 border mb-4 flex-grow-1 d-flex flex-column justify-content-center">
                                         <h5 className="fw-bold text-dark mb-2">{lastActiveEnrollment.course?.title || 'Course'}</h5>
-                                        <p className="text-muted small mb-4">Learn sections, take exams, and unlock your credentials inside the workspace.</p>
-
-                                        <div className="d-flex justify-content-between align-items-center mb-2">
-                                            <span className="text-muted small fw-semibold">Current Progress</span>
-                                            <span className="fw-bold text-primary small">{lastActiveEnrollment.progress || 0}%</span>
-                                        </div>
-                                        <div className="progress rounded-pill" style={{ height: '10px' }}>
-                                            <div className="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style={{ width: `${lastActiveEnrollment.progress || 0}%` }}></div>
-                                        </div>
+                                        <p className="text-muted small mb-3">Learn sections, take exams, and unlock your credentials inside the workspace.</p>
+                                        <span className={`badge px-3 py-2 rounded-3 fw-semibold ${getEnrollmentStatusBadgeClass(lastActiveEnrollment.status)}`}>
+                                            {getEnrollmentStatusLabel(lastActiveEnrollment.status)}
+                                        </span>
                                     </div>
 
                                     <Link className="btn btn-primary py-2.5 rounded-3 fw-bold w-100 auth-primary-btn" to="/my-learning">

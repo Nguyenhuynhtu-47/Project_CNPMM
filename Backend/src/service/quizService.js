@@ -1,5 +1,6 @@
 const Quiz = require('../models/Quiz');
 const QuizResult = require('../models/QuizResult');
+const User = require('../models/User');
 const notificationService = require('./notificationService');
 
 const normalizeQuestion = (question = {}) => ({
@@ -77,8 +78,35 @@ const startAttempt = async (quizId, userId) => {
   return qr;
 };
 
+const notifyTeacherQuizSubmitted = async ({ quiz, quizResult, userId, score }) => {
+  const populatedQuiz = quiz.class?.teacher
+    ? quiz
+    : await Quiz.findById(quiz._id).populate('class', 'code teacher');
+  const teacherId = populatedQuiz.class?.teacher;
+  if (!teacherId) return;
+
+  const student = await User.findById(userId).select('fullName email');
+  const studentName = student?.fullName || student?.email || 'A student';
+  const classCode = populatedQuiz.class?.code ? ` in class ${populatedQuiz.class.code}` : '';
+
+  await notificationService.createNotification(
+    teacherId,
+    'Quiz submitted',
+    `${studentName} submitted quiz "${quiz.title}"${classCode}. Score: ${score}/100.`,
+    {
+      type: 'QUIZ_SUBMITTED',
+      quizId: quiz._id,
+      quizResultId: quizResult._id,
+      studentId: userId,
+      classId: populatedQuiz.class?._id || quiz.class,
+      score,
+      attemptNumber: quizResult.attemptNumber
+    }
+  );
+};
+
 const gradeSubmission = async (quizId, userId, submittedAnswers = []) => {
-  const quiz = await Quiz.findById(quizId);
+  const quiz = await Quiz.findById(quizId).populate('class', 'code teacher');
   if (!quiz) throw new Error('QUIZ_NOT_FOUND');
 
   // check attempts
@@ -137,8 +165,6 @@ const gradeSubmission = async (quizId, userId, submittedAnswers = []) => {
     const prevCount2 = await QuizResult.countDocuments({ quiz: quizId, user: userId });
     const attemptNumber = prevCount2 + 1;
     quizResult = await QuizResult.create({ quiz: quizId, user: userId, attemptNumber, startedAt: new Date(), submittedAt: new Date(), durationSeconds: 0, answers: answersResult, score, passed, status: 'SUBMITTED' });
-    // notify user
-    try { await notificationService.createNotification(userId, 'Quiz submitted', `Your attempt #${attemptNumber} for quiz "${quiz.title}" has been submitted. Score: ${score}`); } catch (e) { console.error('notify failed', e); }
   } else {
     quizResult.answers = answersResult;
     quizResult.score = score;
@@ -147,7 +173,12 @@ const gradeSubmission = async (quizId, userId, submittedAnswers = []) => {
     quizResult.durationSeconds = Math.round((quizResult.submittedAt.getTime() - new Date(quizResult.startedAt).getTime()) / 1000);
     quizResult.status = 'SUBMITTED';
     await quizResult.save();
-    try { await notificationService.createNotification(userId, 'Quiz submitted', `Your attempt #${quizResult.attemptNumber} for quiz "${quiz.title}" has been submitted. Score: ${score}`); } catch (e) { console.error('notify failed', e); }
+  }
+
+  try {
+    await notifyTeacherQuizSubmitted({ quiz, quizResult, userId, score });
+  } catch (e) {
+    console.error('notify teacher failed', e);
   }
 
   return { quizResult, score, passed };
