@@ -4,11 +4,14 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
+import { useSelector } from 'react-redux';
 import CourseImage from '../components/CourseImage';
 import { getCourses } from '../services/course';
 import { getBanners } from '../services/site';
+import { getWishlist } from '../services/wishlist';
+import WishlistButton from '../components/WishlistButton';
 
-const CourseSlider = ({ title, eyebrow, courses, onDetails }) => (
+const CourseSlider = ({ title, eyebrow, courses, onDetails, wishlistIds = new Set(), isLoggedIn = false }) => (
     <section className="py-4 my-3">
         <div className="mb-4">
             <span className="badge bg-primary-subtle text-primary rounded-pill px-3 py-1.5 mb-2 text-uppercase fw-bold" style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>{eyebrow}</span>
@@ -36,6 +39,12 @@ const CourseSlider = ({ title, eyebrow, courses, onDetails }) => (
                             <span className="badge bg-white text-primary position-absolute top-3 start-3 shadow-sm rounded-pill fw-bold text-uppercase" style={{ fontSize: '0.65rem', letterSpacing: '0.02em', zIndex: 3 }}>
                                 {course.category?.name || 'General'}
                             </span>
+                            <WishlistButton 
+                                courseId={course._id} 
+                                initialIsWishlisted={wishlistIds.has(course._id)} 
+                                isLoggedIn={isLoggedIn} 
+                                className="position-absolute top-0 end-0 m-3"
+                            />
                         </div>
                         <div className="card-body p-4 d-flex flex-column justify-content-between flex-grow-1">
                             <div>
@@ -77,6 +86,19 @@ const Home = () => {
     const [bestValueCourses, setBestValueCourses] = useState([]);
     const [premiumCourses, setPremiumCourses] = useState([]);
     const navigate = useNavigate();
+    const { user } = useSelector((state) => state.auth);
+    const [wishlistIds, setWishlistIds] = useState(new Set());
+
+    useEffect(() => {
+        if (user) {
+            getWishlist().then(res => {
+                const ids = res.data.wishlists?.map(w => w.course?._id || w.course) || [];
+                setWishlistIds(new Set(ids));
+            }).catch(err => console.error('Failed to fetch wishlist', err));
+        } else {
+            setWishlistIds(new Set());
+        }
+    }, [user]);
 
     useEffect(() => {
         const fetchHome = async () => {
@@ -180,9 +202,9 @@ const Home = () => {
 
             {/* 3 & 4. Course Categories Sliders */}
             <div id="courses">
-                <CourseSlider eyebrow="New courses" title="Newest learning tracks" courses={newCourses} onDetails={(id) => navigate(`/courses/${id}`)} />
-                <CourseSlider eyebrow="Best value" title="Affordable courses to start today" courses={bestValueCourses} onDetails={(id) => navigate(`/courses/${id}`)} />
-                <CourseSlider eyebrow="Premium goals" title="Advanced courses for ambitious learners" courses={premiumCourses} onDetails={(id) => navigate(`/courses/${id}`)} />
+                <CourseSlider eyebrow="New courses" title="Newest learning tracks" courses={newCourses} onDetails={(id) => navigate(`/courses/${id}`)} wishlistIds={wishlistIds} isLoggedIn={!!user} />
+                <CourseSlider eyebrow="Best value" title="Affordable courses to start today" courses={bestValueCourses} onDetails={(id) => navigate(`/courses/${id}`)} wishlistIds={wishlistIds} isLoggedIn={!!user} />
+                <CourseSlider eyebrow="Premium goals" title="Advanced courses for ambitious learners" courses={premiumCourses} onDetails={(id) => navigate(`/courses/${id}`)} wishlistIds={wishlistIds} isLoggedIn={!!user} />
             </div>
         </div>
     );

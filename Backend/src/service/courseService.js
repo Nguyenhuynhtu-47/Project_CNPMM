@@ -24,11 +24,11 @@ const buildCourseQuery = (filters = {}) => {
     query.status = filters.status;
   }
 
-  if (filters.minPrice != null) {
+  if (filters.minPrice != null && filters.minPrice !== '') {
     query.price = { ...(query.price || {}), $gte: Number(filters.minPrice) };
   }
 
-  if (filters.maxPrice != null) {
+  if (filters.maxPrice != null && filters.maxPrice !== '') {
     query.price = { ...(query.price || {}), $lte: Number(filters.maxPrice) };
   }
 
