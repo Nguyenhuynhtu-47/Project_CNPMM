@@ -6,6 +6,7 @@ class CourseRepository extends BaseRepository {
     super(Course);
   }
 
+  
   findWithFilters(query, { sort, skip, limit }) {
     return this.model.find(query)
       .populate('category', 'name')

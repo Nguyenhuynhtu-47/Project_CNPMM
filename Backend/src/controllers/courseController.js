@@ -101,6 +101,7 @@ const getCategories = async (req, res) => {
   }
 };
 
+
 const updateCategory = async (req, res) => {
   try {
     const category = await courseService.updateCategory(req.params.id, req.body);
