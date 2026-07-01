@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { resetPassword } from '../services/auth';
+import PasswordVisibilityIcon from '../components/PasswordVisibilityIcon';
 
 const ResetPassword = () => {
     const location = useLocation();
@@ -102,7 +103,7 @@ const ResetPassword = () => {
                                     onClick={() => setShowPassword((value) => !value)}
                                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                                 >
-                                    {showPassword ? 'Ẩn' : 'Hiện'}
+                                    <PasswordVisibilityIcon visible={showPassword} />
                                 </button>
                             </div>
                         </label>
