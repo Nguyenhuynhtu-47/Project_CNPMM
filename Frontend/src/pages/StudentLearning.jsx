@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAssignments, submitAssignment } from '../services/assignment';
-import { getMyAttendance, markAttendance } from '../services/attendance';
+import { getMyAttendance } from '../services/attendance';
 import { getMyCertificates, getCertificatePdfUrl } from '../services/certificate';
 import { getChaptersByClass } from '../services/chapter';
 import { createClassComment, getClassComments } from '../services/discussion';
 import { getEnrollments } from '../services/enrollment';
-import { completeLesson, getLessonsByChapter } from '../services/lesson';
+import { getLessonsByChapter } from '../services/lesson';
 import { getQuizzesByClass } from '../services/quiz';
 import { createReview, getCourseReviews } from '../services/review';
 import { addToWishlist, getWishlist, removeFromWishlist } from '../services/wishlist';
@@ -14,6 +14,10 @@ import PaginationControls from '../components/PaginationControls';
 import { createPagination } from '../utils/pagination';
 
 const getId = (value) => value?._id || value || '';
+const formatAttendanceDate = (item) => {
+    const value = item.attendanceDate || item.attendedAt || item.createdAt;
+    return value ? new Date(value).toLocaleDateString('vi-VN') : '-';
+};
 
 const StudentLearning = () => {
     const [enrollments, setEnrollments] = useState([]);
@@ -32,7 +36,6 @@ const StudentLearning = () => {
     const [commentForm, setCommentForm] = useState({ title: '', content: '' });
     const [submissionForm, setSubmissionForm] = useState({});
     const [pages, setPages] = useState({});
-    const [watchedPercent, setWatchedPercent] = useState(0);
     const [loading, setLoading] = useState(true);
     const [detailLoading, setDetailLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -168,29 +171,6 @@ const StudentLearning = () => {
         }
     };
 
-    const handleCompleteLesson = async () => {
-        if (!activeLesson?._id) return;
-        setError(null);
-        setSuccess(null);
-        try {
-            await completeLesson(activeLesson._id);
-            if (classId) {
-                await markAttendance({
-                    class: classId,
-                    lesson: activeLesson._id,
-                    method: 'VIDEO_WATCH',
-                    watchedPercent: Number(watchedPercent)
-                });
-                const attendanceRes = await getMyAttendance();
-                setAttendance(attendanceRes.data.attendances || []);
-            }
-            await loadBasics();
-            setSuccess('Lesson progress saved.');
-        } catch (requestError) {
-            setError(requestError.response?.data?.message || 'Cannot complete lesson.');
-        }
-    };
-
     const handleReviewSubmit = async (event) => {
         event.preventDefault();
         if (!courseId) return;
@@ -269,7 +249,30 @@ const StudentLearning = () => {
         }
 
         if (['PDF', 'DOCX', 'PPT'].includes(type)) {
-            return <iframe className="w-100 rounded-3 border-0 bg-white" src={url} title={activeLesson.title} style={{ minHeight: 480 }} />;
+            const isCloudinaryRaw = url.includes('/raw/upload/');
+            const isLocalUpload = url.includes('/uploads/lessons/');
+            return (
+                <div className="w-100 d-flex flex-wrap align-items-center justify-content-between gap-2 bg-white border rounded-3 px-3 py-2">
+                    <div className="d-flex align-items-center gap-2 min-w-0">
+                        <span className="badge bg-primary-subtle text-primary rounded-2 fw-bold px-2 py-1">{type}</span>
+                        <div className="min-w-0">
+                            <div className="fw-semibold text-dark small text-truncate">{activeLesson.title}</div>
+                            {isCloudinaryRaw && (
+                                <div className="text-danger small">Re-upload document materials so they are saved locally.</div>
+                            )}
+                        </div>
+                    </div>
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        download={isLocalUpload ? '' : undefined}
+                        className="btn btn-primary btn-sm rounded-3 fw-bold px-3 flex-shrink-0"
+                    >
+                        Open / Download
+                    </a>
+                </div>
+            );
         }
 
         return (
@@ -284,6 +287,8 @@ const StudentLearning = () => {
     if (loading) {
         return <div className="container-fluid py-5 text-center text-muted fw-semibold">Loading learning workspace...</div>;
     }
+
+    const activeLessonIsDocument = ['PDF', 'DOCX', 'PPT'].includes(activeLesson?.contentType);
 
     return (
         <div className="container-fluid px-0 py-3">
@@ -390,33 +395,13 @@ const StudentLearning = () => {
                                     </div>
 
                                     {/* Lesson Content Player */}
-                                    <div className="my-3 overflow-hidden rounded-4 bg-black d-flex align-items-center justify-content-center" style={{ minHeight: '320px' }}>
+                                    <div
+                                        className={`my-3 overflow-hidden rounded-4 d-flex align-items-center justify-content-center ${activeLessonIsDocument ? 'bg-light border p-2' : 'bg-black'}`}
+                                        style={{ minHeight: activeLessonIsDocument ? '56px' : '320px' }}
+                                    >
                                         {renderLessonContent()}
                                     </div>
 
-                                    {/* Learning Progress Slider */}
-                                    <div className="row g-3 align-items-center mt-3 pt-3 border-top">
-                                        <div className="col-md-8">
-                                            <label className="form-label small fw-semibold text-dark mb-1" htmlFor="watched-percent">Watched percent</label>
-                                            <div className="d-flex align-items-center gap-3">
-                                                <input
-                                                    id="watched-percent"
-                                                    className="form-range flex-grow-1"
-                                                    type="range"
-                                                    min="0"
-                                                    max="100"
-                                                    value={watchedPercent}
-                                                    onChange={(event) => setWatchedPercent(event.target.value)}
-                                                />
-                                                <span className="badge text-bg-light py-1.5 px-2 fw-bold font-monospace">{watchedPercent}%</span>
-                                            </div>
-                                        </div>
-                                        <div className="col-md-4 d-flex justify-content-md-end">
-                                            <button className="btn btn-primary py-2.5 rounded-3 fw-bold w-100 auth-primary-btn" type="button" onClick={handleCompleteLesson} disabled={!activeLesson}>
-                                                Mark complete
-                                            </button>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 {/* 4. Tabbed interface block */}
@@ -454,15 +439,31 @@ const StudentLearning = () => {
                                                     <div className="d-flex flex-column gap-3">
                                                         {pagedQuizzes.items.map((quiz) => (
                                                             <div key={quiz._id} className="p-3 border rounded-3 bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                                                                <div>
+                                                                <div className="min-w-0">
                                                                     <h6 className="fw-bold text-dark mb-1">{quiz.title}</h6>
                                                                     <p className="text-muted mb-2 small">{quiz.description || 'Complete this quiz as part of your learning journey.'}</p>
-                                                                    <small className="badge bg-light text-secondary rounded-2 px-2.5 py-1 fw-bold">
-                                                                        {quiz.durationMinutes || quiz.timeLimitSeconds ? `Time limit: ${quiz.timeLimitSeconds ? `${quiz.timeLimitSeconds}s` : `${quiz.durationMinutes} minutes`}` : 'No time limit'}
-                                                                    </small>
+                                                                    <div className="d-flex flex-wrap align-items-center gap-2">
+                                                                        <small className="badge bg-light text-secondary rounded-2 px-2.5 py-1 fw-bold">
+                                                                            {quiz.durationMinutes || quiz.timeLimitSeconds ? `Time limit: ${quiz.timeLimitSeconds ? `${quiz.timeLimitSeconds}s` : `${quiz.durationMinutes} minutes`}` : 'No time limit'}
+                                                                        </small>
+                                                                        {quiz.latestResult ? (
+                                                                            <>
+                                                                                <small className="badge bg-primary-subtle text-primary rounded-2 px-2.5 py-1 fw-bold">Score: {quiz.latestResult.score}/100</small>
+                                                                                <small className={`badge rounded-2 px-2.5 py-1 fw-bold ${quiz.latestResult.passed ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}`}>
+                                                                                    {quiz.latestResult.passed ? 'Passed' : 'Failed'}
+                                                                                </small>
+                                                                                <small className="text-muted">
+                                                                                    Attempt #{quiz.latestResult.attemptNumber}
+                                                                                    {quiz.latestResult.submittedAt ? ` - ${new Date(quiz.latestResult.submittedAt).toLocaleString()}` : ''}
+                                                                                </small>
+                                                                            </>
+                                                                        ) : (
+                                                                            <small className="badge bg-warning-subtle text-warning-emphasis rounded-2 px-2.5 py-1 fw-bold">Not submitted</small>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                                 <Link className="btn btn-primary px-3 py-1.5 rounded-2 fw-semibold btn-sm flex-shrink-0" to={`/quizzes/${quiz._id}`}>
-                                                                    Take quiz
+                                                                    {quiz.latestResult ? 'Retake quiz' : 'Take quiz'}
                                                                 </Link>
                                                             </div>
                                                         ))}
@@ -645,8 +646,8 @@ const StudentLearning = () => {
                                                             <thead className="table-light">
                                                                 <tr>
                                                                     <th className="ps-3">Class</th>
+                                                                    <th>Date</th>
                                                                     <th>Lesson</th>
-                                                                    <th>Watched</th>
                                                                     <th className="pe-3">Status</th>
                                                                 </tr>
                                                             </thead>
@@ -654,8 +655,8 @@ const StudentLearning = () => {
                                                                 {pagedAttendance.items.map((item) => (
                                                                     <tr key={item._id}>
                                                                         <td className="ps-3"><span className="badge bg-secondary-subtle text-secondary font-monospace fw-bold">{item.class?.code || '-'}</span></td>
+                                                                        <td className="text-muted small">{formatAttendanceDate(item)}</td>
                                                                         <td>{item.lesson?.title || '-'}</td>
-                                                                        <td className="fw-bold">{item.watchedPercent || 0}%</td>
                                                                         <td className="pe-3"><span className={`badge px-2.5 py-1.5 rounded-2 ${item.attended ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}`}>{item.attended ? 'Attended' : 'Missing'}</span></td>
                                                                     </tr>
                                                                 ))}

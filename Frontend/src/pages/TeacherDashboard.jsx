@@ -10,6 +10,17 @@ import PaginationControls from '../components/PaginationControls';
 import { createPagination } from '../utils/pagination';
 
 const getId = (value) => value?._id || value || '';
+const getTodayInputValue = () => new Date().toISOString().slice(0, 10);
+const formatAttendanceDate = (item) => {
+    const value = item.attendanceDate || item.attendedAt || item.createdAt;
+    return value ? new Date(value).toLocaleDateString('vi-VN') : '-';
+};
+
+const getRequestErrorMessage = (error, fallback) => {
+    const data = error.response?.data;
+    if (data?.error && data?.message) return `${data.message}: ${data.error}`;
+    return data?.message || error.message || fallback;
+};
 
 const emptyLesson = { title: '', description: '', contentType: 'VIDEO', contentUrl: '', durationMinutes: 0, order: 0 };
 const emptyAssignment = { title: '', description: '', dueDate: '', maxScore: 100 };
@@ -46,6 +57,7 @@ const TeacherDashboard = () => {
     const [comments, setComments] = useState([]);
     const [chapterForm, setChapterForm] = useState({ title: '', description: '', order: 0 });
     const [lessonForm, setLessonForm] = useState(emptyLesson);
+    const [lessonFile, setLessonFile] = useState(null);
     const [selectedChapterId, setSelectedChapterId] = useState('');
     const [materialFileByLesson, setMaterialFileByLesson] = useState({});
     const [assignmentForm, setAssignmentForm] = useState(emptyAssignment);
@@ -59,11 +71,10 @@ const TeacherDashboard = () => {
     });
     const [editingQuizId, setEditingQuizId] = useState('');
     const [gradeForm, setGradeForm] = useState({});
-    const [attendanceForm, setAttendanceForm] = useState({ student: '', attended: true, note: '' });
+    const [attendanceForm, setAttendanceForm] = useState({ student: '', attended: true, attendanceDate: getTodayInputValue(), note: '' });
     const [pages, setPages] = useState({});
     const [activeTab, setActiveTab] = useState('classes');
     const [loading, setLoading] = useState(true);
-    const [detailLoading, setDetailLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
@@ -102,7 +113,6 @@ const TeacherDashboard = () => {
             return;
         }
 
-        setDetailLoading(true);
         setError('');
         try {
             const [studentRes, chapterRes, assignmentRes, quizRes, attendanceRes, commentRes] = await Promise.all([
@@ -150,8 +160,6 @@ const TeacherDashboard = () => {
             setComments(commentRes.data.comments || []);
         } catch (requestError) {
             setError(requestError.response?.data?.message || 'Cannot load class details.');
-        } finally {
-            setDetailLoading(false);
         }
     }, [classId, courseId]);
 
@@ -193,17 +201,33 @@ const TeacherDashboard = () => {
         if (!selectedChapterId) return;
         setError('');
         setSuccess('');
+        const selectedFile = lessonFile;
         try {
-            await createLesson({
+            const response = await createLesson({
                 ...lessonForm,
                 chapter: selectedChapterId,
                 durationMinutes: Number(lessonForm.durationMinutes || 0),
                 order: Number(lessonForm.order || 0)
             });
+            const createdLessonId = response.data?._id || response.data?.lesson?._id;
+            if (selectedFile && createdLessonId) {
+                try {
+                    await uploadLessonMedia(createdLessonId, selectedFile);
+                } catch (uploadError) {
+                    if (!lessonForm.contentUrl) {
+                        await deleteLesson(createdLessonId).catch(() => {});
+                    }
+                    throw uploadError;
+                }
+            }
+            if (selectedFile && !createdLessonId) {
+                throw new Error('Lesson was created but its id was not returned for file upload.');
+            }
             setLessonForm(emptyLesson);
-            await reloadDetails('Lesson created.');
+            setLessonFile(null);
+            await reloadDetails(selectedFile ? 'Lesson created and material uploaded.' : 'Lesson created.');
         } catch (requestError) {
-            setError(requestError.response?.data?.message || 'Cannot create lesson.');
+            setError(getRequestErrorMessage(requestError, 'Cannot create lesson or upload material.'));
         }
     };
 
@@ -229,7 +253,7 @@ const TeacherDashboard = () => {
             setMaterialFileByLesson((current) => ({ ...current, [lessonId]: null }));
             await reloadDetails('Material uploaded.');
         } catch (requestError) {
-            setError(requestError.response?.data?.message || 'Cannot upload material.');
+            setError(getRequestErrorMessage(requestError, 'Cannot upload material.'));
         }
     };
 
@@ -415,9 +439,10 @@ const TeacherDashboard = () => {
                 user: attendanceForm.student,
                 method: 'ONLINE_CLASS',
                 attended: attendanceForm.attended,
+                attendanceDate: attendanceForm.attendanceDate,
                 note: attendanceForm.note
             });
-            setAttendanceForm({ student: '', attended: true, note: '' });
+            setAttendanceForm({ student: '', attended: true, attendanceDate: getTodayInputValue(), note: '' });
             await reloadDetails('Attendance saved.');
         } catch (requestError) {
             setError(requestError.response?.data?.message || 'Cannot save attendance.');
@@ -667,6 +692,17 @@ const TeacherDashboard = () => {
                                             <div className="col-12">
                                                 <label className="form-label small fw-semibold text-dark">Content Resource URL</label>
                                                 <input className="form-control bg-light border-0 py-2 rounded-3" placeholder="Content URL (e.g. video file link)" value={lessonForm.contentUrl} onChange={(event) => setLessonForm((current) => ({ ...current, contentUrl: event.target.value }))} />
+                                            </div>
+                                            <div className="col-12">
+                                                <label className="form-label small fw-semibold text-dark">Upload Material File</label>
+                                                <input
+                                                    key={lessonFile ? lessonFile.name : 'lesson-file-empty'}
+                                                    className="form-control bg-light border-0 py-2 rounded-3"
+                                                    type="file"
+                                                    accept=".mp4,.webm,.mp3,.pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png"
+                                                    onChange={(event) => setLessonFile(event.target.files?.[0] || null)}
+                                                />
+                                                <small className="text-muted">Supported: video, audio, PDF, DOC/DOCX, PPT/PPTX, JPG, PNG. You can use either URL or upload a file.</small>
                                             </div>
                                             <div className="col-12">
                                                 <label className="form-label small fw-semibold text-dark">Description</label>
@@ -954,12 +990,16 @@ const TeacherDashboard = () => {
                             <section className="card border-0 shadow-sm rounded-4 p-4">
                                 <h4 className="fw-bold text-dark mb-4">Attendance management</h4>
                                 <form className="row g-3 mb-4 p-3 bg-light rounded-4 border" onSubmit={handleMarkAttendance}>
-                                    <div className="col-md-4">
+                                    <div className="col-md-3">
                                         <label className="form-label small fw-semibold text-dark mb-1">Student select</label>
                                         <select className="form-select bg-white py-2 rounded-3" value={attendanceForm.student} onChange={(event) => setAttendanceForm((current) => ({ ...current, student: event.target.value }))} required>
                                             <option value="">Choose student...</option>
                                             {students.map((student) => <option key={student._id} value={student._id}>{student.fullName}</option>)}
                                         </select>
+                                    </div>
+                                    <div className="col-md-2">
+                                        <label className="form-label small fw-semibold text-dark mb-1">Date</label>
+                                        <input className="form-control bg-white py-2 rounded-3" type="date" value={attendanceForm.attendanceDate} onChange={(event) => setAttendanceForm((current) => ({ ...current, attendanceDate: event.target.value }))} required />
                                     </div>
                                     <div className="col-md-3">
                                         <label className="form-label small fw-semibold text-dark mb-1">Attended status</label>
@@ -982,6 +1022,7 @@ const TeacherDashboard = () => {
                                         <thead className="table-light">
                                             <tr>
                                                 <th className="ps-3">Student Name</th>
+                                                <th>Date</th>
                                                 <th>Lesson Title</th>
                                                 <th>Attended Status</th>
                                                 <th className="pe-3">Note Details</th>
@@ -991,6 +1032,7 @@ const TeacherDashboard = () => {
                                             {pagedAttendance.items.map((item) => (
                                                 <tr key={item._id}>
                                                     <td className="ps-3 fw-semibold text-dark">{item.user?.fullName || '-'}</td>
+                                                    <td className="text-muted small">{formatAttendanceDate(item)}</td>
                                                     <td>{item.lesson?.title || '-'}</td>
                                                     <td>
                                                         <span className={`badge px-2.5 py-1.5 rounded-2 ${item.attended ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}`}>
