@@ -35,6 +35,7 @@ const Sidebar = () => {
         .slice(0, 2)
         .map((word) => word[0]?.toUpperCase())
         .join('') || 'TK';
+    const avatarUrl = user?.avatar || '';
 
     const toggleSidebar = () => setIsOpen(!isOpen);
     const closeSidebar = () => setIsOpen(false);
@@ -54,8 +55,10 @@ const Sidebar = () => {
                     <span className="app-brand__mark">E</span>
                     <span className="fw-bold fs-5 text-dark">English Hub</span>
                 </Link>
-                <div className="mobile-avatar d-flex align-items-center justify-content-center account-avatar" style={{ width: '32px', height: '32px', fontSize: '0.75rem' }}>
-                    {initials}
+                <div className="mobile-avatar d-flex align-items-center justify-content-center account-avatar overflow-hidden" style={{ width: '32px', height: '32px', fontSize: '0.75rem' }}>
+                    {avatarUrl ? (
+                        <img src={avatarUrl} alt="Avatar" className="w-100 h-100" style={{ objectFit: 'cover' }} />
+                    ) : initials}
                 </div>
             </header>
 
@@ -78,8 +81,10 @@ const Sidebar = () => {
                 {/* Bottom Section: User profile and fixed Logout */}
                 <div className="sidebar-footer-wrapper p-3 border-top bg-light">
                     <div className="d-flex align-items-center gap-3 mb-3 px-2">
-                        <div className="account-avatar d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style={{ width: '40px', height: '40px' }}>
-                            {initials}
+                        <div className="account-avatar d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 overflow-hidden" style={{ width: '40px', height: '40px' }}>
+                            {avatarUrl ? (
+                                <img src={avatarUrl} alt="Avatar" className="w-100 h-100" style={{ objectFit: 'cover' }} />
+                            ) : initials}
                         </div>
                         <div className="overflow-hidden">
                             <div className="fw-semibold text-dark text-truncate" style={{ fontSize: '0.9rem' }}>{displayName}</div>
@@ -108,3 +113,4 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
+
