@@ -2,15 +2,6 @@ const courseService = require('../service/courseService');
 const { sendSuccess, sendError } = require('../utils/response');
 const { uploadDataUri } = require('../utils/cloudinary');
 
-const createCourse = async (req, res) => {
-  try {
-    const course = await courseService.createCourse(req.body);
-    return sendSuccess(res, { statusCode: 201, message: 'Course created', data: { course } });
-  } catch (error) {
-    console.error(error);
-    return sendError(res, { message: 'Cannot create course' });
-  }
-};
 
 const getCourses = async (req, res) => {
   try {
@@ -22,6 +13,15 @@ const getCourses = async (req, res) => {
   }
 };
 
+const createCourse = async (req, res) => {
+  try {
+    const course = await courseService.createCourse(req.body);
+    return sendSuccess(res, { statusCode: 201, message: 'Course created', data: { course } });
+  } catch (error) {
+    console.error(error);
+    return sendError(res, { message: 'Cannot create course' });
+  }
+};
 const getCourseById = async (req, res) => {
   try {
     const course = await courseService.getCourseById(req.params.id);
