@@ -44,45 +44,169 @@ const CourseDetail = () => {
     };
 
     if (loading) {
-        return <div className="container py-5">Loading course details...</div>;
+        return <div className="container-fluid py-5 text-center text-muted fw-semibold">Loading course details...</div>;
     }
 
     if (error) {
-        return <div className="container py-5"><div className="alert alert-danger">{error}</div></div>;
+        return (
+            <div className="container-fluid px-0 py-3">
+                <div className="alert alert-danger py-2.5">{error}</div>
+            </div>
+        );
     }
 
     return (
-        <div className="course-detail-page container py-5">
-            <div className="row gy-4">
-                <div className="col-lg-8">
-                    <div className="card p-4">
-                        <CourseImage course={course} className="course-detail-image mb-4" />
-                        <h2>{course.title}</h2>
-                        <p>{course.description}</p>
-                        <p><strong>Price:</strong> {course.price?.toLocaleString('vi-VN')} VND</p>
-                        <p><strong>Category:</strong> {course.category?.name || 'General'}</p>
-                        <p><strong>Duration:</strong> {course.durationWeeks || 'N/A'} weeks</p>
-                        <p><strong>Sessions:</strong> {course.sessionCount || 'N/A'}</p>
+        <div className="container-fluid px-0 py-3">
+            {/* 1. Hero Banner Block */}
+            <div className="bg-dark text-white py-5 mb-4 rounded-4 shadow-sm position-relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)' }}>
+                <div className="col-lg-8 p-0 px-4 position-relative" style={{ zIndex: 2 }}>
+                    <span className="badge bg-primary rounded-pill px-3 py-1.5 mb-3 text-uppercase fw-bold animate-pulse" style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>
+                        {course.category?.name || 'General'}
+                    </span>
+                    <h1 className="display-6 fw-bold text-white mb-3">{course.title}</h1>
+                    <p className="lead mb-4 opacity-90 small" style={{ fontSize: '1rem', maxWidth: '750px' }}>{course.description}</p>
+                    <div className="d-flex flex-wrap gap-3 align-items-center small text-white-50">
+                        <span className="badge bg-warning text-dark px-2.5 py-1.5 fw-bold rounded-2">★ 4.8/5 Course Rating</span>
+                        <span>•</span>
+                        <span className="text-white">{course.durationWeeks || 'N/A'} weeks duration</span>
+                        <span>•</span>
+                        <span className="text-white">{course.sessionCount || 'N/A'} lessons total</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* 2. Two-column Grid */}
+            <div className="row g-4">
+                {/* Left column (70% width) */}
+                <div className="col-lg-8 d-flex flex-column gap-4">
+                    {/* Course Overview details */}
+                    <div className="card border-0 shadow-sm rounded-4 p-4">
+                        <h4 className="fw-bold text-dark mb-3 fs-5">What you will learn</h4>
+                        <p className="text-muted small mb-0">This course is designed to guide you step-by-step through core English principles. By the end, you will be able to speak, write, and execute key exercises confidently within various class workspaces.</p>
+                    </div>
+
+                    {/* 3. Curriculum Syllabus accordion */}
+                    <div className="card border-0 shadow-sm rounded-4 p-4">
+                        <h4 className="fw-bold text-dark mb-4 fs-5">Course Syllabus</h4>
+                        <div className="accordion rounded-3 overflow-hidden border" id="syllabusAccordion">
+                            <div className="accordion-item">
+                                <h2 className="accordion-header" id="headingOne">
+                                    <button className="accordion-button fw-bold text-dark bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                        Chapter 1: Getting Started & Foundations
+                                    </button>
+                                </h2>
+                                <div id="collapseOne" className="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#syllabusAccordion">
+                                    <div className="accordion-body p-0">
+                                        <ul className="list-group list-group-flush">
+                                            <li className="list-group-item d-flex align-items-center gap-2.5 py-3 px-4">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                                <span className="small text-dark">Lesson 1.1: Welcome & Course Overview introduction</span>
+                                            </li>
+                                            <li className="list-group-item d-flex align-items-center gap-2.5 py-3 px-4">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                                <span className="small text-dark">Lesson 1.2: Essential Setup & Study prerequisites</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="accordion-item">
+                                <h2 className="accordion-header" id="headingTwo">
+                                    <button className="accordion-button collapsed fw-bold text-dark bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                        Chapter 2: Theoretical Core Concepts & Practice
+                                    </button>
+                                </h2>
+                                <div id="collapseTwo" className="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#syllabusAccordion">
+                                    <div className="accordion-body p-0">
+                                        <ul className="list-group list-group-flush">
+                                            <li className="list-group-item d-flex align-items-center gap-2.5 py-3 px-4">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                                <span className="small text-dark">Lesson 2.1: Key Theoretical Principles Explained</span>
+                                            </li>
+                                            <li className="list-group-item d-flex align-items-center gap-2.5 py-3 px-4">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                                <span className="small text-dark">Lesson 2.2: Homework assignments details review</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 4. Student Reviews List */}
+                    <div className="card border-0 shadow-sm rounded-4 p-4">
+                        <h4 className="fw-bold text-dark mb-4 fs-5">Student Reviews</h4>
+                        <div className="row g-3">
+                            <div className="col-md-6">
+                                <div className="p-3 bg-light rounded-3 border h-100">
+                                    <div className="d-flex align-items-center gap-2 mb-2">
+                                        <span className="badge bg-warning text-dark fw-bold px-2 py-1">★ 5.0</span>
+                                        <strong className="text-dark small">Minh Anh</strong>
+                                    </div>
+                                    <p className="text-muted small mb-0">"Course was extremely structured and clear. The exercises really helped reinforce my understanding."</p>
+                                </div>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="p-3 bg-light rounded-3 border h-100">
+                                    <div className="d-flex align-items-center gap-2 mb-2">
+                                        <span className="badge bg-warning text-dark fw-bold px-2 py-1">★ 4.8</span>
+                                        <strong className="text-dark small">Hoang Nam</strong>
+                                    </div>
+                                    <p className="text-muted small mb-0">"Great lectures. The pacing was perfect for me and the setup guidelines were very helpful."</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
+                {/* Right column (30% width) - Sticky info card */}
                 <div className="col-lg-4">
-                    <div className="card p-4 mb-4">
-                        <h3>Quick actions</h3>
-                        <p>{Number(course.price || 0) === 0 ? 'Enroll directly and wait for class assignment.' : 'Review the final amount before continuing to VNPAY.'}</p>
-                        <div className="d-grid gap-2 mt-3">
-                            {Number(course.price || 0) === 0 ? (
-                                <button className="btn btn-outline-primary" type="button" onClick={handleEnroll} disabled={enrollLoading}>
-                                    {enrollLoading ? 'Processing...' : 'Enroll now'}
-                                </button>
-                            ) : (
-                                <Link className="btn btn-primary" to={`/checkout/${id}`}>
-                                    Continue to checkout
-                                </Link>
-                            )}
+                    <div className="position-sticky" style={{ top: '24px' }}>
+                        <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
+                            <div style={{ height: '180px', position: 'relative' }}>
+                                <CourseImage course={course} className="w-100 h-100 object-fit-cover" />
+                            </div>
+                            <div className="card-body p-4">
+                                <h3 className="fw-bold text-primary mb-3.5">{course.price?.toLocaleString('vi-VN')} VND</h3>
+                                
+                                <div className="d-flex flex-column gap-2.5 mb-4">
+                                    <div className="d-flex justify-content-between text-muted small">
+                                        <span>Category:</span>
+                                        <span className="fw-bold text-dark">{course.category?.name || 'General'}</span>
+                                    </div>
+                                    <div className="d-flex justify-content-between text-muted small border-top pt-2.5">
+                                        <span>Duration:</span>
+                                        <span className="fw-bold text-dark">{course.durationWeeks || 'N/A'} weeks</span>
+                                    </div>
+                                    <div className="d-flex justify-content-between text-muted small border-top pt-2.5">
+                                        <span>Lessons:</span>
+                                        <span className="fw-bold text-dark">{course.sessionCount || 'N/A'} lectures</span>
+                                    </div>
+                                </div>
+
+                                <p className="text-muted small mb-4 text-center">
+                                    {Number(course.price || 0) === 0 
+                                        ? 'Enroll directly and wait for class assignment.' 
+                                        : 'Review the final amount before continuing to VNPAY.'}
+                                </p>
+
+                                <div className="d-grid gap-2">
+                                    {Number(course.price || 0) === 0 ? (
+                                        <button className="btn btn-primary py-2.5 rounded-3 fw-bold auth-primary-btn" type="button" onClick={handleEnroll} disabled={enrollLoading}>
+                                            {enrollLoading ? 'Processing...' : 'Enroll now'}
+                                        </button>
+                                    ) : (
+                                        <Link className="btn btn-primary py-2.5 rounded-3 fw-bold auth-primary-btn text-center" to={`/checkout/${id}`}>
+                                            Continue to checkout
+                                        </Link>
+                                    )}
+                                </div>
+
+                                {success && <div className="alert alert-success py-2 mt-3 small mb-0">{success}</div>}
+                                {error && <div className="alert alert-danger py-2 mt-3 small mb-0">{error}</div>}
+                            </div>
                         </div>
-                        {success && <div className="alert alert-success mt-3">{success}</div>}
-                        {error && <div className="alert alert-danger mt-3">{error}</div>}
                     </div>
                 </div>
             </div>
