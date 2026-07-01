@@ -17,7 +17,12 @@ const listAllNotifications = async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 100;
     const skip = Number(req.query.skip) || 0;
-    const notifications = await notificationService.listAll(limit, skip);
+    const filters = {};
+    if (req.query.startDate) filters.startDate = req.query.startDate;
+    if (req.query.endDate) filters.endDate = req.query.endDate;
+    if (req.query.role) filters.role = req.query.role;
+    
+    const notifications = await notificationService.listAll(limit, skip, filters);
     return res.status(200).json({ notifications });
   } catch (err) {
     console.error(err);

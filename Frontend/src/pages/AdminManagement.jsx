@@ -49,6 +49,12 @@ const AdminManagement = () => {
     const [coupons, setCoupons] = useState([]);
     const [userForm, setUserForm] = useState(emptyUser);
     const [userFilters, setUserFilters] = useState({ q: '', role: '', status: '' });
+    const [courseFilters, setCourseFilters] = useState({ q: '', category: '', minPrice: '', maxPrice: '', sort: '' });
+    const [appliedCourseFilters, setAppliedCourseFilters] = useState({ q: '', category: '', minPrice: '', maxPrice: '', sort: '' });
+    const [classFilters, setClassFilters] = useState({ code: '', course: '', teacher: '', status: '' });
+    const [appliedClassFilters, setAppliedClassFilters] = useState({ code: '', course: '', teacher: '', status: '' });
+    const [notificationFilters, setNotificationFilters] = useState({ startDate: '', endDate: '', role: '' });
+    const [appliedNotificationFilters, setAppliedNotificationFilters] = useState({ startDate: '', endDate: '', role: '' });
     const [userPagination, setUserPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
     const [roleForm, setRoleForm] = useState({ code: '', name: '', permissions: [] });
     const [courseForm, setCourseForm] = useState(emptyCourse);
@@ -98,6 +104,64 @@ const AdminManagement = () => {
         setUserPagination((current) => ({ ...current, page: 1 }));
     }, []);
 
+    const updateCourseFilter = useCallback((nextFilter) => {
+        setCourseFilters((current) => ({ ...current, ...nextFilter }));
+    }, []);
+
+    const applyCourseFilters = () => {
+        setAppliedCourseFilters(courseFilters);
+        setListPages((current) => ({ ...current, courses: 1 }));
+    };
+
+    const clearCourseFilters = () => {
+        const emptyFilters = { q: '', category: '', minPrice: '', maxPrice: '', sort: '' };
+        setCourseFilters(emptyFilters);
+        setAppliedCourseFilters(emptyFilters);
+        setListPages((current) => ({ ...current, courses: 1 }));
+    };
+
+    const updateClassFilter = useCallback((nextFilter) => {
+        setClassFilters((current) => ({ ...current, ...nextFilter }));
+    }, []);
+
+    const applyClassFilters = () => {
+        setAppliedClassFilters(classFilters);
+        setListPages((current) => ({ ...current, classes: 1 }));
+    };
+
+    const clearClassFilters = () => {
+        const emptyFilters = { code: '', course: '', teacher: '', status: '' };
+        setClassFilters(emptyFilters);
+        setAppliedClassFilters(emptyFilters);
+        setListPages((current) => ({ ...current, classes: 1 }));
+    };
+
+    const updateNotificationFilter = useCallback((nextFilter) => {
+        setNotificationFilters((current) => ({ ...current, ...nextFilter }));
+    }, []);
+
+    const applyNotificationFilters = () => {
+        if (notificationFilters.startDate && notificationFilters.endDate) {
+            const start = new Date(notificationFilters.startDate);
+            const end = new Date(notificationFilters.endDate);
+            if (start > end) {
+                setError('Start date cannot be after end date');
+                return;
+            }
+        }
+        setError('');
+        setAppliedNotificationFilters(notificationFilters);
+        setListPages((current) => ({ ...current, notifications: 1 }));
+    };
+
+    const clearNotificationFilters = () => {
+        const emptyFilters = { startDate: '', endDate: '', role: '' };
+        setNotificationFilters(emptyFilters);
+        setAppliedNotificationFilters(emptyFilters);
+        setError('');
+        setListPages((current) => ({ ...current, notifications: 1 }));
+    };
+
     const changeUserPage = (nextPage) => {
         setUserPagination((current) => ({
             ...current,
@@ -115,14 +179,14 @@ const AdminManagement = () => {
                 getAdminUsers({ ...userFilters, page: userPagination.page, limit: userPagination.limit }),
                 getRoles(),
                 getPermissions(),
-                getCourses({ limit: 100 }),
+                getCourses({ limit: 100, ...appliedCourseFilters }),
                 getCategories(),
-                getClasses(),
+                getClasses(appliedClassFilters),
                 getAllEnrollments(),
                 getAllOrders(),
                 loadBanners(),
                 loadSettings(),
-                listAllNotifications(),
+                listAllNotifications(appliedNotificationFilters),
                 getCoupons()
             ]);
             setUsers(userRes.data.users || []);
@@ -150,7 +214,7 @@ const AdminManagement = () => {
         } catch (requestError) {
             showError(requestError, 'Cannot load admin data');
         }
-    }, [showError, userFilters, userPagination.limit, userPagination.page]);
+    }, [showError, userFilters, userPagination.limit, userPagination.page, appliedCourseFilters, appliedClassFilters, appliedNotificationFilters]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -594,6 +658,38 @@ const AdminManagement = () => {
                             </form>
                             <hr className="my-4 opacity-10" />
 
+                            <h4 className="fw-bold text-dark mb-3 fs-5">Search and filter courses</h4>
+                            <div className="row g-3 mb-4">
+                                <div className="col-md-2">
+                                    <input className="form-control py-2 rounded-3" placeholder="Search title or description" value={courseFilters.q} onChange={(e) => updateCourseFilter({ q: e.target.value })} />
+                                </div>
+                                <div className="col-md-2">
+                                    <select className="form-select py-2 rounded-3" value={courseFilters.category} onChange={(e) => updateCourseFilter({ category: e.target.value })}>
+                                        <option value="">All categories</option>
+                                        {categories.map((cat) => <option key={cat._id} value={cat._id}>{cat.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="col-md-2">
+                                    <input type="text" className="form-control py-2 rounded-3" placeholder="Min price" value={courseFilters.minPrice ? Number(courseFilters.minPrice).toLocaleString('vi-VN') : ''} onChange={(e) => updateCourseFilter({ minPrice: e.target.value.replace(/\D/g, '') })} />
+                                </div>
+                                <div className="col-md-2">
+                                    <input type="text" className="form-control py-2 rounded-3" placeholder="Max price" value={courseFilters.maxPrice ? Number(courseFilters.maxPrice).toLocaleString('vi-VN') : ''} onChange={(e) => updateCourseFilter({ maxPrice: e.target.value.replace(/\D/g, '') })} />
+                                </div>
+                                <div className="col-md-2">
+                                    <select className="form-select py-2 rounded-3" value={courseFilters.sort} onChange={(e) => updateCourseFilter({ sort: e.target.value })}>
+                                        <option value="">Sort by...</option>
+                                        <option value="priceAsc">Price: Low to High</option>
+                                        <option value="priceDesc">Price: High to Low</option>
+                                        <option value="newest">Newest</option>
+                                        <option value="titleAsc">Title A-Z</option>
+                                    </select>
+                                </div>
+                                <div className="col-md-2 d-flex gap-2">
+                                    <button className="btn btn-primary w-100 py-2 rounded-3" type="button" onClick={applyCourseFilters}>Apply</button>
+                                    <button className="btn btn-outline-secondary w-100 py-2 rounded-3" type="button" onClick={clearCourseFilters}>Clear</button>
+                                </div>
+                            </div>
+
                             <h4 className="fw-bold text-dark mb-3 fs-5">Courses</h4>
                             <div className="d-flex flex-column gap-3 mb-3">
                                 {pagedCourses.items.map((course) => (
@@ -668,6 +764,38 @@ const AdminManagement = () => {
                                 </div>
                             </form>
                             <hr className="my-4 opacity-10" />
+
+                            <h4 className="fw-bold text-dark mb-3 fs-5">Search and filter classes</h4>
+                            <div className="row g-3 mb-4">
+                                <div className="col-md-2">
+                                    <input className="form-control py-2 rounded-3" placeholder="Search class code" value={classFilters.code} onChange={(e) => updateClassFilter({ code: e.target.value })} />
+                                </div>
+                                <div className="col-md-3">
+                                    <select className="form-select py-2 rounded-3" value={classFilters.course} onChange={(e) => updateClassFilter({ course: e.target.value })}>
+                                        <option value="">All courses</option>
+                                        {courses.map((course) => <option key={course._id} value={course._id}>{course.title}</option>)}
+                                    </select>
+                                </div>
+                                <div className="col-md-3">
+                                    <select className="form-select py-2 rounded-3" value={classFilters.teacher} onChange={(e) => updateClassFilter({ teacher: e.target.value })}>
+                                        <option value="">All teachers</option>
+                                        {teachers.map((teacher) => <option key={teacher._id} value={teacher._id}>{teacher.fullName || teacher.email}</option>)}
+                                    </select>
+                                </div>
+                                <div className="col-md-2">
+                                    <select className="form-select py-2 rounded-3" value={classFilters.status} onChange={(e) => updateClassFilter({ status: e.target.value })}>
+                                        <option value="">All statuses</option>
+                                        <option value="OPEN">OPEN</option>
+                                        <option value="IN_PROGRESS">IN_PROGRESS</option>
+                                        <option value="COMPLETED">COMPLETED</option>
+                                        <option value="CLOSED">CLOSED</option>
+                                    </select>
+                                </div>
+                                <div className="col-md-2 d-flex gap-2">
+                                    <button className="btn btn-primary w-100 py-2 rounded-3" type="button" onClick={applyClassFilters}>Apply</button>
+                                    <button className="btn btn-outline-secondary w-100 py-2 rounded-3" type="button" onClick={clearClassFilters}>Clear</button>
+                                </div>
+                            </div>
 
                             <h4 className="fw-bold text-dark mb-3 fs-5">Classes</h4>
                             <div className="d-flex flex-column gap-3 mb-3">
@@ -954,6 +1082,26 @@ const AdminManagement = () => {
                                 </div>
                             </form>
                             <hr className="my-4 opacity-10" />
+
+                            <h4 className="fw-bold text-dark mb-3 fs-5">Search and filter notifications</h4>
+                            <div className="row g-3 mb-4">
+                                <div className="col-md-5 d-flex align-items-center gap-2">
+                                    <span className="text-muted small fw-semibold text-nowrap">From date</span>
+                                    <input type="date" className="form-control py-2 rounded-3" value={notificationFilters.startDate} onChange={(e) => updateNotificationFilter({ startDate: e.target.value })} />
+                                    <span className="text-muted small fw-semibold text-nowrap">to date</span>
+                                    <input type="date" className="form-control py-2 rounded-3" value={notificationFilters.endDate} onChange={(e) => updateNotificationFilter({ endDate: e.target.value })} />
+                                </div>
+                                <div className="col-md-3">
+                                    <select className="form-select py-2 rounded-3" value={notificationFilters.role} onChange={(e) => updateNotificationFilter({ role: e.target.value })}>
+                                        <option value="">All roles</option>
+                                        {roleOptions.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="col-md-3 d-flex gap-2">
+                                    <button className="btn btn-primary w-100 py-2 rounded-3" type="button" onClick={applyNotificationFilters}>Apply</button>
+                                    <button className="btn btn-outline-secondary w-100 py-2 rounded-3" type="button" onClick={clearNotificationFilters}>Clear</button>
+                                </div>
+                            </div>
 
                             <h4 className="fw-bold text-dark mb-3 fs-5">Recent notifications</h4>
                             <div className="table-responsive rounded-3 border mb-3">
