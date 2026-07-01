@@ -7,29 +7,51 @@ const lessonProgressRepository = require('../repositories/lessonProgressReposito
 const courseDto = require('../dtos/courseDto');
 
 const buildCourseQuery = (filters = {}) => {
+  const {
+    q,
+    category,
+    status,
+    minPrice,
+    maxPrice
+  } = filters;
+
   const query = {};
 
-  if (filters.q) {
+  if (q) {
     query.$or = [
-      { title: { $regex: filters.q, $options: 'i' } },
-      { description: { $regex: filters.q, $options: 'i' } }
+      {
+        title: {
+          $regex: q,
+          $options: 'i'
+        }
+      },
+      {
+        description: {
+          $regex: q,
+          $options: 'i'
+        }
+      }
     ];
   }
 
-  if (filters.category) {
-    query.category = filters.category;
+  if (category) {
+    query.category = category;
   }
 
-  if (filters.status) {
-    query.status = filters.status;
+  if (status) {
+    query.status = status;
   }
 
-  if (filters.minPrice != null) {
-    query.price = { ...(query.price || {}), $gte: Number(filters.minPrice) };
-  }
+  if (minPrice != null || maxPrice != null) {
+    query.price = {};
 
-  if (filters.maxPrice != null) {
-    query.price = { ...(query.price || {}), $lte: Number(filters.maxPrice) };
+    if (minPrice != null) {
+      query.price.$gte = Number(minPrice);
+    }
+
+    if (maxPrice != null) {
+      query.price.$lte = Number(maxPrice);
+    }
   }
 
   return query;
