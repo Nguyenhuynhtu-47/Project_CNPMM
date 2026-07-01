@@ -7,6 +7,7 @@ import { broadcastNotification, listAllNotifications } from '../services/notific
 import { getAllOrders } from '../services/order';
 import { createRole, getPermissions, getRoles } from '../services/rbac';
 import { getAllBanners as loadBanners, createBanner as addBanner, deleteBanner as removeBanner, getSettings as loadSettings, upsertSetting as saveSetting, deleteSetting as removeSetting } from '../services/site';
+import { createCoupon, getCoupons, updateCoupon } from '../services/coupon';
 import CourseImage from '../components/CourseImage';
 import PaginationControls from '../components/PaginationControls';
 import { createPagination } from '../utils/pagination';
@@ -16,6 +17,7 @@ const emptyClass = { code: '', course: '', teacher: '', startDate: '', endDate: 
 const emptyUser = { email: '', password: '123456', role: 'TEACHER', fullName: '', status: 'ACTIVE' };
 const emptyBanner = { title: '', subtitle: '', imageUrl: '', linkUrl: '', position: 0, active: true };
 const emptyNotification = { title: '', message: '', role: '', status: 'ACTIVE' };
+const emptyCoupon = { code: '', name: '', discountType: 'PERCENT', discountValue: '', maxDiscountAmount: '', minOrderAmount: '', usageLimit: '', perUserLimit: 1, startsAt: '', expiresAt: '', active: true };
 const fallbackRoles = [
     { code: 'ADMIN', name: 'Admin' },
     { code: 'MANAGER', name: 'Manager' },
@@ -44,6 +46,7 @@ const AdminManagement = () => {
     const [settings, setSettings] = useState([]);
     const [enrollments, setEnrollments] = useState([]);
     const [notifications, setNotifications] = useState([]);
+    const [coupons, setCoupons] = useState([]);
     const [userForm, setUserForm] = useState(emptyUser);
     const [userFilters, setUserFilters] = useState({ q: '', role: '', status: '' });
     const [userPagination, setUserPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
@@ -59,6 +62,7 @@ const AdminManagement = () => {
     const [bannerForm, setBannerForm] = useState(emptyBanner);
     const [settingForm, setSettingForm] = useState({ key: '', value: '', description: '' });
     const [notificationForm, setNotificationForm] = useState(emptyNotification);
+    const [couponForm, setCouponForm] = useState(emptyCoupon);
     const [listPages, setListPages] = useState({});
     const listLimit = 5;
 
@@ -107,7 +111,7 @@ const AdminManagement = () => {
 
     const loadAll = useCallback(async () => {
         try {
-            const [userRes, roleRes, permissionRes, courseRes, categoryRes, classRes, enrollmentRes, orderRes, bannerRes, settingRes, notificationRes] = await Promise.all([
+            const [userRes, roleRes, permissionRes, courseRes, categoryRes, classRes, enrollmentRes, orderRes, bannerRes, settingRes, notificationRes, couponRes] = await Promise.all([
                 getAdminUsers({ ...userFilters, page: userPagination.page, limit: userPagination.limit }),
                 getRoles(),
                 getPermissions(),
@@ -118,7 +122,8 @@ const AdminManagement = () => {
                 getAllOrders(),
                 loadBanners(),
                 loadSettings(),
-                listAllNotifications()
+                listAllNotifications(),
+                getCoupons()
             ]);
             setUsers(userRes.data.users || []);
             setUserPagination((current) => {
@@ -141,6 +146,7 @@ const AdminManagement = () => {
             setBanners(bannerRes.data.banners || []);
             setSettings(settingRes.data.settings || []);
             setNotifications(notificationRes.data.notifications || []);
+            setCoupons(couponRes.data.coupons || []);
         } catch (requestError) {
             showError(requestError, 'Cannot load admin data');
         }
@@ -244,6 +250,27 @@ const AdminManagement = () => {
         }
     };
 
+    const submitCoupon = async (event) => {
+        event.preventDefault();
+        try {
+            await createCoupon({
+                ...couponForm,
+                discountValue: Number(couponForm.discountValue || 0),
+                maxDiscountAmount: Number(couponForm.maxDiscountAmount || 0),
+                minOrderAmount: Number(couponForm.minOrderAmount || 0),
+                usageLimit: Number(couponForm.usageLimit || 0),
+                perUserLimit: Number(couponForm.perUserLimit || 0),
+                startsAt: couponForm.startsAt || undefined,
+                expiresAt: couponForm.expiresAt || undefined
+            });
+            setCouponForm(emptyCoupon);
+            await loadAll();
+            showSuccess('Coupon created');
+        } catch (requestError) {
+            showError(requestError, 'Cannot create coupon');
+        }
+    };
+
     const startEditCourse = (course) => {
         setEditingCourseId(course._id);
         setCourseImageUrl(course.imageUrl || '');
@@ -326,6 +353,7 @@ const AdminManagement = () => {
     const pagedSettings = paginateList('settings', settings);
     const pagedNotifications = paginateList('notifications', notifications);
     const pagedOrders = paginateList('orders', orders);
+    const pagedCoupons = paginateList('coupons', coupons);
 
     const tabs = [
         ['users', 'Users'],
@@ -334,6 +362,7 @@ const AdminManagement = () => {
         ['classes', 'Classes'],
         ['banners', 'Banners'],
         ['settings', 'Settings'],
+        ['coupons', 'Coupons'],
         ['notifications', 'Notifications'],
         ['payments', 'Payments']
     ];
@@ -563,6 +592,61 @@ const AdminManagement = () => {
                         'Cannot delete setting'
                     )}>Delete</button></div>)}
                     {settings.length > 0 && <PaginationControls pagination={pagedSettings.pagination} onPageChange={(page) => setListPage('settings', page)} itemLabel="settings" />}
+                </section>
+            )}
+
+            {activeTab === 'coupons' && (
+                <section className="card p-4">
+                    <h4>Create coupon</h4>
+                    <form className="row gy-3" onSubmit={submitCoupon}>
+                        <div className="col-md-2"><input className="form-control" placeholder="Code" value={couponForm.code} onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value })} required /></div>
+                        <div className="col-md-3"><input className="form-control" placeholder="Name" value={couponForm.name} onChange={(e) => setCouponForm({ ...couponForm, name: e.target.value })} required /></div>
+                        <div className="col-md-2">
+                            <select className="form-select" value={couponForm.discountType} onChange={(e) => setCouponForm({ ...couponForm, discountType: e.target.value })}>
+                                <option value="PERCENT">Percent</option>
+                                <option value="FIXED">Fixed amount</option>
+                            </select>
+                        </div>
+                        <div className="col-md-2"><input className="form-control" type="number" min="0" placeholder="Discount" value={couponForm.discountValue} onChange={(e) => setCouponForm({ ...couponForm, discountValue: e.target.value })} required /></div>
+                        <div className="col-md-3"><input className="form-control" type="number" min="0" placeholder="Max discount VND" value={couponForm.maxDiscountAmount} onChange={(e) => setCouponForm({ ...couponForm, maxDiscountAmount: e.target.value })} /></div>
+                        <div className="col-md-3"><input className="form-control" type="number" min="0" placeholder="Minimum order VND" value={couponForm.minOrderAmount} onChange={(e) => setCouponForm({ ...couponForm, minOrderAmount: e.target.value })} /></div>
+                        <div className="col-md-2"><input className="form-control" type="number" min="0" placeholder="Total uses" value={couponForm.usageLimit} onChange={(e) => setCouponForm({ ...couponForm, usageLimit: e.target.value })} /></div>
+                        <div className="col-md-2"><input className="form-control" type="number" min="0" placeholder="Uses/user" value={couponForm.perUserLimit} onChange={(e) => setCouponForm({ ...couponForm, perUserLimit: e.target.value })} /></div>
+                        <div className="col-md-2"><input className="form-control" type="date" value={couponForm.startsAt} onChange={(e) => setCouponForm({ ...couponForm, startsAt: e.target.value })} /></div>
+                        <div className="col-md-2"><input className="form-control" type="date" value={couponForm.expiresAt} onChange={(e) => setCouponForm({ ...couponForm, expiresAt: e.target.value })} /></div>
+                        <div className="col-md-1 form-check d-flex align-items-center gap-2">
+                            <input className="form-check-input" id="couponActive" type="checkbox" checked={couponForm.active} onChange={(e) => setCouponForm({ ...couponForm, active: e.target.checked })} />
+                            <label className="form-check-label" htmlFor="couponActive">Active</label>
+                        </div>
+                        <div className="col-md-2"><button className="btn btn-primary w-100">Create</button></div>
+                    </form>
+                    <hr />
+                    <div className="table-responsive">
+                        <table className="table align-middle">
+                            <thead><tr><th>Code</th><th>Name</th><th>Discount</th><th>Min order</th><th>Usage</th><th>Status</th><th>Expires</th><th>Actions</th></tr></thead>
+                            <tbody>{pagedCoupons.items.map((coupon) => (
+                                <tr key={coupon._id}>
+                                    <td><strong>{coupon.code}</strong></td>
+                                    <td>{coupon.name}</td>
+                                    <td>{coupon.discountType === 'PERCENT' ? `${coupon.discountValue}%` : `${Number(coupon.discountValue || 0).toLocaleString('vi-VN')}d`}{coupon.maxDiscountAmount > 0 ? `, cap ${Number(coupon.maxDiscountAmount).toLocaleString('vi-VN')}d` : ''}</td>
+                                    <td>{Number(coupon.minOrderAmount || 0).toLocaleString('vi-VN')}d</td>
+                                    <td>{coupon.usedCount || 0}/{coupon.usageLimit || 'Unlimited'}</td>
+                                    <td>{coupon.active ? 'Active' : 'Inactive'}</td>
+                                    <td>{coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : '-'}</td>
+                                    <td>
+                                        <button className="btn btn-sm btn-outline-primary" type="button" onClick={() => runConfirmedAction(
+                                            `${coupon.active ? 'Disable' : 'Enable'} coupon "${coupon.code}"?`,
+                                            () => updateCoupon(coupon._id, { active: !coupon.active }),
+                                            'Coupon updated',
+                                            'Cannot update coupon'
+                                        )}>{coupon.active ? 'Disable' : 'Enable'}</button>
+                                    </td>
+                                </tr>
+                            ))}</tbody>
+                        </table>
+                    </div>
+                    {coupons.length === 0 && <p className="text-muted mb-0">No coupons have been created.</p>}
+                    {coupons.length > 0 && <PaginationControls pagination={pagedCoupons.pagination} onPageChange={(page) => setListPage('coupons', page)} itemLabel="coupons" />}
                 </section>
             )}
 

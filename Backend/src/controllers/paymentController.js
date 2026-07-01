@@ -1,13 +1,56 @@
 const paymentService = require('../service/paymentService');
 const orderService = require('../service/orderService');
 
+const couponErrors = {
+  COUPON_NOT_FOUND: 'Coupon not found',
+  COUPON_INACTIVE: 'Coupon is inactive or expired',
+  COUPON_USAGE_LIMIT: 'Coupon usage limit reached',
+  COUPON_USER_LIMIT: 'You already used this coupon',
+  COUPON_MIN_ORDER: 'Order amount does not meet coupon minimum'
+};
+
+const previewPayment = async (req, res) => {
+  try {
+    const { courseId, couponCode, pointsToUse } = req.body;
+    const preview = await orderService.previewOrder({
+      userId: req.user._id,
+      courseId,
+      couponCode,
+      pointsToUse
+    });
+
+    return res.status(200).json({ preview });
+  } catch (error) {
+    console.error(error);
+    if (error.message === 'COURSE_NOT_FOUND') return res.status(404).json({ message: 'Course not found' });
+    if (couponErrors[error.message]) return res.status(400).json({ message: couponErrors[error.message] });
+    return res.status(500).json({ message: 'Cannot preview payment' });
+  }
+};
+
 const createPayment = async (req, res) => {
   try {
-    const { courseId } = req.body;
+    const { courseId, couponCode, pointsToUse } = req.body;
     const order = await orderService.createOrder({
       userId: req.user._id,
-      courseId
+      courseId,
+      couponCode,
+      pointsToUse
     });
+
+    if (Number(order.amount || 0) <= 0) {
+      const paidOrder = await orderService.markOrderPaid(order._id, {
+        transactionRef: 'FULL_DISCOUNT',
+        vnpResponseCode: '00',
+        rawCallback: { source: 'FULL_DISCOUNT' }
+      });
+      return res.status(200).json({
+        message: 'Order paid by coupon or loyalty points',
+        paid: true,
+        orderId: paidOrder._id,
+        order: paidOrder
+      });
+    }
 
     const txnRef = order._id.toString();
     const vnpUrl = paymentService.buildVnpayUrl({
@@ -21,6 +64,9 @@ const createPayment = async (req, res) => {
     return res.status(200).json({ paymentUrl: vnpUrl, orderId: order._id });
   } catch (error) {
     console.error(error);
+    if (couponErrors[error.message]) {
+      return res.status(400).json({ message: couponErrors[error.message] });
+    }
     return res.status(500).json({ message: 'Cannot create payment' });
   }
 };
@@ -89,6 +135,7 @@ const handleVnpayReturn = async (req, res) => {
 };
 
 module.exports = {
+  previewPayment,
   createPayment,
   handleVnpayReturn
 };

@@ -78,16 +78,16 @@ const getCourseById = async (id) => {
   return courseDto.toCourseResponse(course);
 };
 
-const getCourseChapters = async (courseId) => {
-  return chapterRepository.findByCourse(courseId);
-};
-
 const getCourseProgress = async (userId, courseId) => {
   const enrollment = await enrollmentRepository.findByUserAndCourse(userId, courseId);
-  const chapters = await chapterRepository.findByCourse(courseId);
+  const chapters = enrollment?.class
+    ? await chapterRepository.findByClass(enrollment.class)
+    : await chapterRepository.findByCourse(courseId);
   const chapterIds = chapters.map((chapter) => chapter._id);
   const totalLessons = await lessonRepository.countPublishedByChapters(chapterIds);
-  const completedLessons = await lessonProgressRepository.countCompletedLessons(userId, courseId);
+  const completedLessons = enrollment?.class
+    ? await lessonProgressRepository.countCompletedLessonsByClass(userId, enrollment.class)
+    : await lessonProgressRepository.countCompletedLessons(userId, courseId);
   const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
   if (!enrollment) {
@@ -134,7 +134,6 @@ module.exports = {
   createCourse,
   getCourses,
   getCourseById,
-  getCourseChapters,
   getCourseProgress,
   updateCourse,
   deleteCourse,

@@ -2,10 +2,12 @@ const orderService = require('../service/orderService');
 
 const createOrder = async (req, res) => {
   try {
-    const { courseId } = req.body;
+    const { courseId, couponCode, pointsToUse } = req.body;
     const order = await orderService.createOrder({
       userId: req.user._id,
-      courseId
+      courseId,
+      couponCode,
+      pointsToUse
     });
 
     return res.status(201).json({ message: 'Order created', order });
@@ -13,6 +15,16 @@ const createOrder = async (req, res) => {
     console.error(error);
     if (error.message === 'COURSE_NOT_FOUND') {
       return res.status(404).json({ message: 'Course not found' });
+    }
+    const couponErrors = {
+      COUPON_NOT_FOUND: 'Coupon not found',
+      COUPON_INACTIVE: 'Coupon is inactive or expired',
+      COUPON_USAGE_LIMIT: 'Coupon usage limit reached',
+      COUPON_USER_LIMIT: 'You already used this coupon',
+      COUPON_MIN_ORDER: 'Order amount does not meet coupon minimum'
+    };
+    if (couponErrors[error.message]) {
+      return res.status(400).json({ message: couponErrors[error.message] });
     }
     return res.status(500).json({ message: 'Cannot create order' });
   }

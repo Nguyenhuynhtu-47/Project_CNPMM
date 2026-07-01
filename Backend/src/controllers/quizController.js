@@ -1,8 +1,26 @@
 const quizService = require('../service/quizService');
+const ClassModel = require('../models/Class');
+const { canAccessClass, canManageClass: userCanManageClass } = require('../utils/classAccess');
+const { normalizeRoleCode } = require('../service/rbacService');
+
+const getRole = (req) => normalizeRoleCode(req.user?.roleRef?.code || req.user?.role);
+
+const canManageClass = async (req, classId) => {
+  return userCanManageClass(req.user, classId);
+};
+
+const canAccessQuiz = async (req, quiz) => {
+  if (!quiz?.class) return false;
+  const classId = quiz.class?._id || quiz.class;
+  return canAccessClass(req.user, classId);
+};
 
 const createQuiz = async (req, res) => {
   try {
     const data = { ...req.body }; // expect course, title, questions, etc.
+    if (!data.class) return res.status(400).json({ message: 'Class id is required' });
+    const allowed = await canManageClass(req, data.class);
+    if (!allowed) return res.status(403).json({ message: 'You do not manage this class' });
     const quiz = await quizService.createQuiz(data);
     return res.status(201).json({ message: 'Quiz created', quiz });
   } catch (error) {
@@ -13,8 +31,12 @@ const createQuiz = async (req, res) => {
 
 const updateQuiz = async (req, res) => {
   try {
+    const existingQuiz = await quizService.getQuizById(req.params.id);
+    if (!existingQuiz) return res.status(404).json({ message: 'Quiz not found' });
+    const targetClassId = req.body.class || existingQuiz.class?._id || existingQuiz.class;
+    const allowed = await canManageClass(req, targetClassId);
+    if (!allowed) return res.status(403).json({ message: 'You do not manage this class' });
     const quiz = await quizService.updateQuiz(req.params.id, req.body);
-    if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
     return res.status(200).json({ message: 'Quiz updated', quiz });
   } catch (error) {
     console.error(error);
@@ -22,10 +44,23 @@ const updateQuiz = async (req, res) => {
   }
 };
 
-const getQuizzesByCourse = async (req, res) => {
+const getQuizzesByClass = async (req, res) => {
   try {
-    const courseId = req.params.courseId;
-    const quizzes = await quizService.getQuizzesByCourse(courseId);
+    const classId = req.params.classId;
+    const classItem = await ClassModel.findById(classId).select('teacher');
+    if (!classItem) return res.status(404).json({ message: 'Class not found' });
+
+    const role = getRole(req);
+    if (role === 'TEACHER' && String(classItem.teacher) !== String(req.user._id)) {
+      return res.status(403).json({ message: 'You do not manage this class' });
+    }
+
+    if (!['ADMIN', 'MANAGER', 'TEACHER'].includes(role)) {
+      const allowed = await canAccessClass(req.user, classId);
+      if (!allowed) return res.status(403).json({ message: 'You are not enrolled in this class' });
+    }
+
+    const quizzes = await quizService.getQuizzesByClass(classId);
     return res.status(200).json({ quizzes });
   } catch (error) {
     console.error(error);
@@ -37,6 +72,8 @@ const getQuizById = async (req, res) => {
   try {
     const quiz = await quizService.getQuizById(req.params.id);
     if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+    const allowed = await canAccessQuiz(req, quiz);
+    if (!allowed) return res.status(403).json({ message: 'You cannot access this quiz' });
 
     // hide correct answers when returning quiz to students
     const quizObj = quiz.toObject();
@@ -57,6 +94,10 @@ const submitQuiz = async (req, res) => {
     const quizId = req.params.id;
     const userId = req.user && req.user._id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const quiz = await quizService.getQuizById(quizId);
+    if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+    const allowed = await canAccessQuiz(req, quiz);
+    if (!allowed || ['ADMIN', 'MANAGER', 'TEACHER'].includes(getRole(req))) return res.status(403).json({ message: 'You cannot submit this quiz' });
 
     const { answers } = req.body; // [{ questionId, answer }]
     const result = await quizService.gradeSubmission(quizId, userId, answers || []);
@@ -76,6 +117,10 @@ const startAttempt = async (req, res) => {
     const quizId = req.params.id;
     const userId = req.user && req.user._id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const quiz = await quizService.getQuizById(quizId);
+    if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+    const allowed = await canAccessQuiz(req, quiz);
+    if (!allowed || ['ADMIN', 'MANAGER', 'TEACHER'].includes(getRole(req))) return res.status(403).json({ message: 'You cannot start this quiz' });
     const qr = await quizService.startAttempt(quizId, userId);
     return res.status(201).json({ message: 'Attempt started', attempt: qr });
   } catch (error) {
@@ -89,7 +134,7 @@ const startAttempt = async (req, res) => {
 module.exports = {
   createQuiz,
   updateQuiz,
-  getQuizzesByCourse,
+  getQuizzesByClass,
   getQuizById,
   startAttempt,
   submitQuiz

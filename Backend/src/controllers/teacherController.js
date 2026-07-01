@@ -4,6 +4,8 @@ const Quiz = require('../models/Quiz');
 const QuizResult = require('../models/QuizResult');
 const Assignment = require('../models/Assignment');
 const Submission = require('../models/Submission');
+const { normalizeRoleCode } = require('../service/rbacService');
+const enrollmentService = require('../service/enrollmentService');
 
 const getMyClasses = async (req, res) => {
   try {
@@ -36,12 +38,13 @@ const getClassStudents = async (req, res) => {
 
 const getQuizResults = async (req, res) => {
   try {
-    const quiz = await Quiz.findById(req.params.quizId).populate('course', 'title');
+    const quiz = await Quiz.findById(req.params.quizId).populate('course', 'title').populate('class', 'code teacher');
     if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
 
-    const assignedClass = await ClassModel.exists({ teacher: req.user._id, course: quiz.course });
-    if (!assignedClass && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ message: 'You do not manage this quiz course' });
+    const managesClass = quiz.class && String(quiz.class.teacher) === String(req.user._id);
+    const role = normalizeRoleCode(req.user?.roleRef?.code || req.user?.role);
+    if (!managesClass && role !== 'ADMIN') {
+      return res.status(403).json({ message: 'You do not manage this quiz class' });
     }
 
     const results = await QuizResult.find({ quiz: req.params.quizId })
@@ -78,9 +81,29 @@ const getAssignmentAnalytics = async (req, res) => {
   }
 };
 
+const approveCourseCompletion = async (req, res) => {
+  try {
+    const enrollment = await enrollmentService.approveCourseCompletion({
+      enrollmentId: req.params.enrollmentId,
+      teacherId: req.user._id,
+      note: req.body.note || ''
+    });
+
+    return res.status(200).json({ message: 'Course completion approved', enrollment });
+  } catch (error) {
+    console.error(error);
+    if (error.message === 'ENROLLMENT_NOT_FOUND') return res.status(404).json({ message: 'Enrollment not found' });
+    if (['CLASS_NOT_ASSIGNED', 'CLASS_NOT_ASSIGNED_TO_TEACHER'].includes(error.message)) {
+      return res.status(403).json({ message: 'You do not manage this enrollment class' });
+    }
+    return res.status(500).json({ message: 'Cannot approve course completion' });
+  }
+};
+
 module.exports = {
   getMyClasses,
   getClassStudents,
   getQuizResults,
-  getAssignmentAnalytics
+  getAssignmentAnalytics,
+  approveCourseCompletion
 };

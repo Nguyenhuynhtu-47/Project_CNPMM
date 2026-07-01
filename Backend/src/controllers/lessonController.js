@@ -2,6 +2,8 @@ const Lesson = require('../models/Lesson');
 const Chapter = require('../models/Chapter');
 const LessonProgress = require('../models/LessonProgress');
 const enrollmentService = require('../service/enrollmentService');
+const { canAccessClass, canManageClass } = require('../utils/classAccess');
+const { normalizeRoleCode } = require('../service/rbacService');
 
 const buildLessonPayload = (body) => ({
   chapter: body.chapter,
@@ -25,6 +27,10 @@ exports.createLesson = async (req, res) => {
     if (!chapterExists) {
       return res.status(404).json({ message: 'Chapter not found' });
     }
+    const allowed = await canManageClass(req.user, chapterExists.class);
+    if (!allowed) {
+      return res.status(403).json({ message: 'You do not manage this class' });
+    }
 
     const lesson = await Lesson.create(removeUndefined(buildLessonPayload(req.body)));
 
@@ -36,6 +42,13 @@ exports.createLesson = async (req, res) => {
 
 exports.getLessonsByChapter = async (req, res) => {
   try {
+    const chapter = await Chapter.findById(req.params.chapterId);
+    if (!chapter) return res.status(404).json({ message: 'Chapter not found' });
+    const allowed = await canAccessClass(req.user, chapter.class);
+    if (!allowed) {
+      return res.status(403).json({ message: 'You cannot access this class content' });
+    }
+
     const lessons = await Lesson.find({ chapter: req.params.chapterId }).sort('order');
     res.json(lessons);
   } catch (error) {
@@ -45,9 +58,13 @@ exports.getLessonsByChapter = async (req, res) => {
 
 exports.getLessonById = async (req, res) => {
   try {
-    const lesson = await Lesson.findById(req.params.id);
+    const lesson = await Lesson.findById(req.params.id).populate({ path: 'chapter', select: 'class course' });
     if (!lesson) {
       return res.status(404).json({ message: 'Lesson not found' });
+    }
+    const allowed = await canAccessClass(req.user, lesson.chapter?.class);
+    if (!allowed) {
+      return res.status(403).json({ message: 'You cannot access this lesson' });
     }
     res.json(lesson);
   } catch (error) {
@@ -57,6 +74,15 @@ exports.getLessonById = async (req, res) => {
 
 exports.updateLesson = async (req, res) => {
   try {
+    const existingLesson = await Lesson.findById(req.params.id).populate({ path: 'chapter', select: 'class' });
+    if (!existingLesson) {
+      return res.status(404).json({ message: 'Lesson not found' });
+    }
+    const allowed = await canManageClass(req.user, existingLesson.chapter?.class);
+    if (!allowed) {
+      return res.status(403).json({ message: 'You do not manage this class' });
+    }
+
     const updates = removeUndefined(buildLessonPayload(req.body));
     delete updates.chapter;
 
@@ -72,6 +98,15 @@ exports.updateLesson = async (req, res) => {
 
 exports.deleteLesson = async (req, res) => {
   try {
+    const existingLesson = await Lesson.findById(req.params.id).populate({ path: 'chapter', select: 'class' });
+    if (!existingLesson) {
+      return res.status(404).json({ message: 'Lesson not found' });
+    }
+    const allowed = await canManageClass(req.user, existingLesson.chapter?.class);
+    if (!allowed) {
+      return res.status(403).json({ message: 'You do not manage this class' });
+    }
+
     const lesson = await Lesson.findByIdAndDelete(req.params.id);
     if (!lesson) {
       return res.status(404).json({ message: 'Lesson not found' });
@@ -84,6 +119,13 @@ exports.deleteLesson = async (req, res) => {
 
 exports.reorderLessons = async (req, res) => {
   try {
+    const chapter = await Chapter.findById(req.params.chapterId);
+    if (!chapter) return res.status(404).json({ message: 'Chapter not found' });
+    const allowed = await canManageClass(req.user, chapter.class);
+    if (!allowed) {
+      return res.status(403).json({ message: 'You do not manage this class' });
+    }
+
     const updates = Array.isArray(req.body.lessons) ? req.body.lessons : [];
     if (!updates.length) return res.status(400).json({ message: 'Lessons reorder payload is required' });
 
@@ -103,19 +145,27 @@ exports.completeLesson = async (req, res) => {
     const userId = req.user && req.user._id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const lesson = await Lesson.findById(lessonId).populate({ path: 'chapter', select: 'course' });
+    const lesson = await Lesson.findById(lessonId).populate({ path: 'chapter', select: 'course class' });
     if (!lesson) return res.status(404).json({ message: 'Lesson not found' });
 
     const courseId = lesson.chapter?.course;
+    const classId = lesson.chapter?.class;
     if (!courseId) return res.status(400).json({ message: 'Lesson not linked to course' });
+    if (!classId) return res.status(400).json({ message: 'Lesson not linked to class' });
+
+    const allowed = await canAccessClass(req.user, classId);
+    const role = normalizeRoleCode(req.user?.roleRef?.code || req.user?.role);
+    if (!allowed || ['ADMIN', 'TEACHER', 'MANAGER'].includes(role)) {
+      return res.status(403).json({ message: 'You cannot complete this lesson' });
+    }
 
     try {
-      await LessonProgress.create({ user: userId, lesson: lessonId, course: courseId });
+      await LessonProgress.create({ user: userId, lesson: lessonId, course: courseId, class: classId });
     } catch (error) {
       if (error.code !== 11000) throw error;
     }
 
-    const { completedLessons, totalLessons, progress } = await enrollmentService.refreshEnrollmentProgress(userId, courseId);
+    const { completedLessons, totalLessons, progress } = await enrollmentService.refreshEnrollmentProgress(userId, courseId, classId);
 
     return res.status(200).json({ message: 'Lesson marked complete', completedLessons, totalLessons, progress });
   } catch (error) {

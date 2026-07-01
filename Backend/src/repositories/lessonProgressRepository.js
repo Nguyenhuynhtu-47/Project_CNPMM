@@ -9,6 +9,10 @@ class LessonProgressRepository extends BaseRepository {
   countCompletedLessons(userId, courseId) {
     return this.model.countDocuments({ user: userId, course: courseId });
   }
+
+  countCompletedLessonsByClass(userId, classId) {
+    return this.model.countDocuments({ user: userId, class: classId });
+  }
 }
 
 module.exports = new LessonProgressRepository();

@@ -1,7 +1,18 @@
 const Attendance = require('../models/Attendance');
+const { canAccessClass, canManageClass } = require('../utils/classAccess');
+const { normalizeRoleCode } = require('../service/rbacService');
+
+const getRole = (req) => normalizeRoleCode(req.user?.roleRef?.code || req.user?.role);
 
 const markAttendance = async (req, res) => {
   try {
+    const classId = req.body.class;
+    const markingAnotherUser = req.body.user && String(req.body.user) !== String(req.user._id);
+    const allowed = markingAnotherUser
+      ? await canManageClass(req.user, classId)
+      : await canAccessClass(req.user, classId);
+    if (!allowed) return res.status(403).json({ message: 'You cannot mark attendance for this class' });
+
     const watchedPercent = Number(req.body.watchedPercent || 0);
     const method = req.body.method || 'ONLINE_CLASS';
     const attended = method === 'VIDEO_WATCH' ? watchedPercent >= 80 : Boolean(req.body.attended ?? true);
@@ -37,6 +48,13 @@ const listAttendance = async (req, res) => {
     const query = {};
     if (req.query.class) query.class = req.query.class;
     if (req.query.user) query.user = req.query.user;
+    if (req.query.class) {
+      const allowed = await canAccessClass(req.user, req.query.class);
+      if (!allowed) return res.status(403).json({ message: 'You cannot access this class attendance' });
+      if (!['ADMIN', 'MANAGER', 'TEACHER'].includes(getRole(req))) query.user = req.user._id;
+    } else if (!['ADMIN', 'MANAGER'].includes(getRole(req))) {
+      query.user = req.user._id;
+    }
 
     const attendances = await Attendance.find(query)
       .populate('user', 'fullName email')
@@ -70,6 +88,13 @@ const getAttendanceSummary = async (req, res) => {
     const match = {};
     if (req.query.class) match.class = req.query.class;
     if (req.query.user) match.user = req.query.user;
+    if (req.query.class) {
+      const allowed = await canAccessClass(req.user, req.query.class);
+      if (!allowed) return res.status(403).json({ message: 'You cannot access this class attendance' });
+      if (!['ADMIN', 'MANAGER', 'TEACHER'].includes(getRole(req))) match.user = req.user._id;
+    } else if (!['ADMIN', 'MANAGER'].includes(getRole(req))) {
+      match.user = req.user._id;
+    }
 
     const summary = await Attendance.aggregate([
       { $match: match },

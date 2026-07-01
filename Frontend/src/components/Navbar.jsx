@@ -8,6 +8,7 @@ const menuItems = [
     { label: 'Orders', to: '/orders', roles: ['STUDENT', 'USER', 'ADMIN'] },
     { label: 'Enrollments', to: '/enrollments', roles: ['STUDENT', 'USER', 'ADMIN'] },
     { label: 'My learning', to: '/my-learning', roles: ['STUDENT', 'USER', 'ADMIN'] },
+    { label: 'Wishlist', to: '/wishlist', roles: ['STUDENT', 'USER', 'ADMIN'] },
     { label: 'Dashboard', to: '/dashboard' },
     { label: 'Admin dashboard', to: '/admin', roles: ['ADMIN'] },
     { label: 'Admin management', to: '/admin/manage', roles: ['ADMIN'] },
