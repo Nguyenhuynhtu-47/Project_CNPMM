@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getCourseById } from '../services/course';
 import { enrollInCourse } from '../services/enrollment';
+import { getCourseReviews } from '../services/review';
 import CourseImage from '../components/CourseImage';
 
 const CourseDetail = () => {
@@ -11,6 +12,9 @@ const CourseDetail = () => {
     const [error, setError] = useState(null);
     const [enrollLoading, setEnrollLoading] = useState(false);
     const [success, setSuccess] = useState(null);
+    const [reviews, setReviews] = useState([]);
+    const [reviewsLoading, setReviewsLoading] = useState(true);
+    const [reviewsError, setReviewsError] = useState(null);
 
     useEffect(() => {
         const loadCourse = async () => {
@@ -26,8 +30,27 @@ const CourseDetail = () => {
             }
         };
 
+        const loadReviews = async () => {
+            setReviewsLoading(true);
+            setReviewsError(null);
+            try {
+                const reviewsRes = await getCourseReviews(id);
+                setReviews(reviewsRes.data.reviews || []);
+            } catch {
+                setReviewsError('Cannot load reviews.');
+            } finally {
+                setReviewsLoading(false);
+            }
+        };
+
         loadCourse();
+        loadReviews();
     }, [id]);
+
+    const reviewCount = reviews.length;
+    const averageRating = reviewCount > 0
+        ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviewCount).toFixed(1)
+        : null;
 
     const handleEnroll = async () => {
         setEnrollLoading(true);
@@ -66,7 +89,9 @@ const CourseDetail = () => {
                     <h1 className="display-6 fw-bold text-white mb-3">{course.title}</h1>
                     <p className="lead mb-4 opacity-90 small" style={{ fontSize: '1rem', maxWidth: '750px' }}>{course.description}</p>
                     <div className="d-flex flex-wrap gap-3 align-items-center small text-white-50">
-                        <span className="badge bg-warning text-dark px-2.5 py-1.5 fw-bold rounded-2">★ 4.8/5 Course Rating</span>
+                        <span className="badge bg-warning text-dark px-2.5 py-1.5 fw-bold rounded-2">
+                            ★ {averageRating ? `${averageRating}/5` : 'No reviews'} Course Rating
+                        </span>
                         <span>•</span>
                         <span className="text-white">{course.durationWeeks || 'N/A'} weeks duration</span>
                         <span>•</span>
@@ -136,27 +161,66 @@ const CourseDetail = () => {
 
                     {/* 4. Student Reviews List */}
                     <div className="card border-0 shadow-sm rounded-4 p-4">
-                        <h4 className="fw-bold text-dark mb-4 fs-5">Student Reviews</h4>
-                        <div className="row g-3">
-                            <div className="col-md-6">
-                                <div className="p-3 bg-light rounded-3 border h-100">
-                                    <div className="d-flex align-items-center gap-2 mb-2">
-                                        <span className="badge bg-warning text-dark fw-bold px-2 py-1">★ 5.0</span>
-                                        <strong className="text-dark small">Minh Anh</strong>
-                                    </div>
-                                    <p className="text-muted small mb-0">"Course was extremely structured and clear. The exercises really helped reinforce my understanding."</p>
-                                </div>
+                        <h4 className="fw-bold text-dark mb-4 fs-5">Student Reviews ({reviewCount})</h4>
+                        {reviewsLoading ? (
+                            <div className="text-center py-4 text-muted fw-semibold small">Loading reviews...</div>
+                        ) : reviewsError ? (
+                            <div className="alert alert-danger py-2.5 small mb-0">{reviewsError}</div>
+                        ) : reviews.length === 0 ? (
+                            <div className="text-center py-4 text-muted fw-semibold small">No reviews yet.</div>
+                        ) : (
+                            <div className="row g-3">
+                                {reviews.map((review) => {
+                                    const displayName = review.user?.fullName?.trim() || 'Anonymous';
+                                    const initials = displayName
+                                        .split(' ')
+                                        .filter(Boolean)
+                                        .slice(0, 2)
+                                        .map((word) => word[0]?.toUpperCase())
+                                        .join('') || 'U';
+
+                                    return (
+                                        <div key={review._id} className="col-md-6">
+                                            <div className="p-3 bg-light rounded-3 border h-100 d-flex flex-column justify-content-between">
+                                                <div>
+                                                    <div className="d-flex align-items-center justify-content-between mb-2">
+                                                        <div className="d-flex align-items-center gap-2">
+                                                            {review.user?.avatar ? (
+                                                                <img
+                                                                    src={review.user.avatar}
+                                                                    className="rounded-circle object-fit-cover"
+                                                                    style={{ width: '28px', height: '28px' }}
+                                                                    alt={displayName}
+                                                                />
+                                                            ) : (
+                                                                <span
+                                                                    className="account-avatar flex-shrink-0"
+                                                                    style={{ width: '28px', height: '28px', fontSize: '0.7rem' }}
+                                                                >
+                                                                    {initials}
+                                                                </span>
+                                                            )}
+                                                            <strong className="text-dark small">{displayName}</strong>
+                                                        </div>
+                                                        <span className="badge bg-warning text-dark fw-bold px-2 py-1">
+                                                            ★ {review.rating?.toFixed(1) || '0.0'}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-muted small mb-0">"{review.content}"</p>
+                                                </div>
+                                                {review.createdAt && (
+                                                    <div className="text-end mt-2">
+                                                        <span className="text-muted" style={{ fontSize: '0.7rem' }}>
+                                                            {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <div className="col-md-6">
-                                <div className="p-3 bg-light rounded-3 border h-100">
-                                    <div className="d-flex align-items-center gap-2 mb-2">
-                                        <span className="badge bg-warning text-dark fw-bold px-2 py-1">★ 4.8</span>
-                                        <strong className="text-dark small">Hoang Nam</strong>
-                                    </div>
-                                    <p className="text-muted small mb-0">"Great lectures. The pacing was perfect for me and the setup guidelines were very helpful."</p>
-                                </div>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 
