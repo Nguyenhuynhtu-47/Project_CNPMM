@@ -589,32 +589,38 @@ const StudentLearning = () => {
                                         {activeWorkspaceTab === 'reviews' && (
                                             <div className="tab-pane fade show active" role="tabpanel">
                                                 <h5 className="fw-bold text-dark mb-3">Course review</h5>
-                                                <form className="row g-3 mb-4 p-3 bg-light rounded-4 border" onSubmit={handleReviewSubmit}>
-                                                    <div className="col-md-3">
-                                                        <label className="form-label small fw-semibold text-dark" htmlFor="review-rating">Rating</label>
-                                                        <select
-                                                            id="review-rating"
-                                                            className="form-select bg-white rounded-3 py-2"
-                                                            value={reviewForm.rating}
-                                                            onChange={(event) => setReviewForm((current) => ({ ...current, rating: event.target.value }))}
-                                                        >
-                                                            {[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} Stars</option>)}
-                                                        </select>
+                                                {selectedEnrollment?.status === 'COMPLETED' ? (
+                                                    <form className="row g-3 mb-4 p-3 bg-light rounded-4 border" onSubmit={handleReviewSubmit}>
+                                                        <div className="col-md-3">
+                                                            <label className="form-label small fw-semibold text-dark" htmlFor="review-rating">Rating</label>
+                                                            <select
+                                                                id="review-rating"
+                                                                className="form-select bg-white rounded-3 py-2"
+                                                                value={reviewForm.rating}
+                                                                onChange={(event) => setReviewForm((current) => ({ ...current, rating: event.target.value }))}
+                                                            >
+                                                                {[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} Stars</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="col-md-9">
+                                                            <label className="form-label small fw-semibold text-dark" htmlFor="review-content">Your Review</label>
+                                                            <input
+                                                                id="review-content"
+                                                                className="form-control bg-white rounded-3 py-2"
+                                                                placeholder="Tell us what you think of this course..."
+                                                                value={reviewForm.content}
+                                                                onChange={(event) => setReviewForm((current) => ({ ...current, content: event.target.value }))}
+                                                            />
+                                                        </div>
+                                                        <div className="col-12 mt-3 text-end">
+                                                            <button className="btn btn-primary px-4 py-2 rounded-3 fw-bold auth-primary-btn" type="submit">Save review</button>
+                                                        </div>
+                                                    </form>
+                                                ) : (
+                                                    <div className="alert alert-info py-2.5 small mb-4">
+                                                        You can review this course after completing all lessons.
                                                     </div>
-                                                    <div className="col-md-9">
-                                                        <label className="form-label small fw-semibold text-dark" htmlFor="review-content">Your Review</label>
-                                                        <input
-                                                            id="review-content"
-                                                            className="form-control bg-white rounded-3 py-2"
-                                                            placeholder="Tell us what you think of this course..."
-                                                            value={reviewForm.content}
-                                                            onChange={(event) => setReviewForm((current) => ({ ...current, content: event.target.value }))}
-                                                        />
-                                                    </div>
-                                                    <div className="col-12 mt-3 text-end">
-                                                        <button className="btn btn-primary px-4 py-2 rounded-3 fw-bold auth-primary-btn" type="submit">Save review</button>
-                                                    </div>
-                                                </form>
+                                                )}
 
                                                 <div className="d-flex flex-column gap-2.5">
                                                     {pagedReviews.items.map((review) => (

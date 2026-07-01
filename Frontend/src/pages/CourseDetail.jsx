@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getCourseById } from '../services/course';
 import { enrollInCourse } from '../services/enrollment';
+import { getCourseReviews } from '../services/review';
 import { useSelector } from 'react-redux';
 import { getWishlist } from '../services/wishlist';
 import CourseImage from '../components/CourseImage';
@@ -14,6 +15,9 @@ const CourseDetail = () => {
     const [error, setError] = useState(null);
     const [enrollLoading, setEnrollLoading] = useState(false);
     const [success, setSuccess] = useState(null);
+    const [reviews, setReviews] = useState([]);
+    const [reviewsLoading, setReviewsLoading] = useState(true);
+    const [reviewsError, setReviewsError] = useState(null);
     const { user } = useSelector((state) => state.auth);
     const [wishlistIds, setWishlistIds] = useState(new Set());
 
@@ -42,8 +46,27 @@ const CourseDetail = () => {
             }
         };
 
+        const loadReviews = async () => {
+            setReviewsLoading(true);
+            setReviewsError(null);
+            try {
+                const reviewsRes = await getCourseReviews(id);
+                setReviews(reviewsRes.data.reviews || []);
+            } catch {
+                setReviewsError('Cannot load reviews.');
+            } finally {
+                setReviewsLoading(false);
+            }
+        };
+
         loadCourse();
+        loadReviews();
     }, [id]);
+
+    const reviewCount = reviews.length;
+    const averageRating = reviewCount > 0
+        ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviewCount).toFixed(1)
+        : null;
 
     const handleEnroll = async () => {
         setEnrollLoading(true);
@@ -82,7 +105,9 @@ const CourseDetail = () => {
                     <h1 className="display-6 fw-bold text-white mb-3">{course.title}</h1>
                     <p className="lead mb-4 opacity-90 small" style={{ fontSize: '1rem', maxWidth: '750px' }}>{course.description}</p>
                     <div className="d-flex flex-wrap gap-3 align-items-center small text-white-50">
-                        <span className="badge bg-warning text-dark px-2.5 py-1.5 fw-bold rounded-2">★ 4.8/5 Course Rating</span>
+                        <span className="badge bg-warning text-dark px-2.5 py-1.5 fw-bold rounded-2">
+                            ★ {averageRating ? `${averageRating}/5` : 'No reviews'} Course Rating
+                        </span>
                         <span>•</span>
                         <span className="text-white">{course.durationWeeks || 'N/A'} weeks duration</span>
                         <span>•</span>
@@ -97,82 +122,72 @@ const CourseDetail = () => {
                 <div className="col-lg-8 d-flex flex-column gap-4">
                     {/* Course Overview details */}
                     <div className="card border-0 shadow-sm rounded-4 p-4">
-                        <h4 className="fw-bold text-dark mb-3 fs-5">What you will learn</h4>
-                        <p className="text-muted small mb-0">This course is designed to guide you step-by-step through core English principles. By the end, you will be able to speak, write, and execute key exercises confidently within various class workspaces.</p>
+                        <h4 className="fw-bold text-dark mb-3 fs-5">About this course</h4>
+                        <p className="text-muted small mb-0">{course.description}</p>
                     </div>
 
-                    {/* 3. Curriculum Syllabus accordion */}
+{/* 4. Student Reviews List */}
                     <div className="card border-0 shadow-sm rounded-4 p-4">
-                        <h4 className="fw-bold text-dark mb-4 fs-5">Course Syllabus</h4>
-                        <div className="accordion rounded-3 overflow-hidden border" id="syllabusAccordion">
-                            <div className="accordion-item">
-                                <h2 className="accordion-header" id="headingOne">
-                                    <button className="accordion-button fw-bold text-dark bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                                        Chapter 1: Getting Started & Foundations
-                                    </button>
-                                </h2>
-                                <div id="collapseOne" className="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#syllabusAccordion">
-                                    <div className="accordion-body p-0">
-                                        <ul className="list-group list-group-flush">
-                                            <li className="list-group-item d-flex align-items-center gap-2.5 py-3 px-4">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                                <span className="small text-dark">Lesson 1.1: Welcome & Course Overview introduction</span>
-                                            </li>
-                                            <li className="list-group-item d-flex align-items-center gap-2.5 py-3 px-4">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                                <span className="small text-dark">Lesson 1.2: Essential Setup & Study prerequisites</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="accordion-item">
-                                <h2 className="accordion-header" id="headingTwo">
-                                    <button className="accordion-button collapsed fw-bold text-dark bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                                        Chapter 2: Theoretical Core Concepts & Practice
-                                    </button>
-                                </h2>
-                                <div id="collapseTwo" className="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#syllabusAccordion">
-                                    <div className="accordion-body p-0">
-                                        <ul className="list-group list-group-flush">
-                                            <li className="list-group-item d-flex align-items-center gap-2.5 py-3 px-4">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                                <span className="small text-dark">Lesson 2.1: Key Theoretical Principles Explained</span>
-                                            </li>
-                                            <li className="list-group-item d-flex align-items-center gap-2.5 py-3 px-4">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                                <span className="small text-dark">Lesson 2.2: Homework assignments details review</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                        <h4 className="fw-bold text-dark mb-4 fs-5">Student Reviews ({reviewCount})</h4>
+                        {reviewsLoading ? (
+                            <div className="text-center py-4 text-muted fw-semibold small">Loading reviews...</div>
+                        ) : reviewsError ? (
+                            <div className="alert alert-danger py-2.5 small mb-0">{reviewsError}</div>
+                        ) : reviews.length === 0 ? (
+                            <div className="text-center py-4 text-muted fw-semibold small">No reviews yet.</div>
+                        ) : (
+                            <div className="row g-3">
+                                {reviews.map((review) => {
+                                    const displayName = review.user?.fullName?.trim() || 'Anonymous';
+                                    const initials = displayName
+                                        .split(' ')
+                                        .filter(Boolean)
+                                        .slice(0, 2)
+                                        .map((word) => word[0]?.toUpperCase())
+                                        .join('') || 'U';
 
-                    {/* 4. Student Reviews List */}
-                    <div className="card border-0 shadow-sm rounded-4 p-4">
-                        <h4 className="fw-bold text-dark mb-4 fs-5">Student Reviews</h4>
-                        <div className="row g-3">
-                            <div className="col-md-6">
-                                <div className="p-3 bg-light rounded-3 border h-100">
-                                    <div className="d-flex align-items-center gap-2 mb-2">
-                                        <span className="badge bg-warning text-dark fw-bold px-2 py-1">★ 5.0</span>
-                                        <strong className="text-dark small">Minh Anh</strong>
-                                    </div>
-                                    <p className="text-muted small mb-0">"Course was extremely structured and clear. The exercises really helped reinforce my understanding."</p>
-                                </div>
+                                    return (
+                                        <div key={review._id} className="col-md-6">
+                                            <div className="p-3 bg-light rounded-3 border h-100 d-flex flex-column justify-content-between">
+                                                <div>
+                                                    <div className="d-flex align-items-center justify-content-between mb-2">
+                                                        <div className="d-flex align-items-center gap-2">
+                                                            {review.user?.avatar ? (
+                                                                <img
+                                                                    src={review.user.avatar}
+                                                                    className="rounded-circle object-fit-cover"
+                                                                    style={{ width: '28px', height: '28px' }}
+                                                                    alt={displayName}
+                                                                />
+                                                            ) : (
+                                                                <span
+                                                                    className="account-avatar flex-shrink-0"
+                                                                    style={{ width: '28px', height: '28px', fontSize: '0.7rem' }}
+                                                                >
+                                                                    {initials}
+                                                                </span>
+                                                            )}
+                                                            <strong className="text-dark small">{displayName}</strong>
+                                                        </div>
+                                                        <span className="badge bg-warning text-dark fw-bold px-2 py-1">
+                                                            ★ {review.rating?.toFixed(1) || '0.0'}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-muted small mb-0">"{review.content}"</p>
+                                                </div>
+                                                {review.createdAt && (
+                                                    <div className="text-end mt-2">
+                                                        <span className="text-muted" style={{ fontSize: '0.7rem' }}>
+                                                            {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <div className="col-md-6">
-                                <div className="p-3 bg-light rounded-3 border h-100">
-                                    <div className="d-flex align-items-center gap-2 mb-2">
-                                        <span className="badge bg-warning text-dark fw-bold px-2 py-1">★ 4.8</span>
-                                        <strong className="text-dark small">Hoang Nam</strong>
-                                    </div>
-                                    <p className="text-muted small mb-0">"Great lectures. The pacing was perfect for me and the setup guidelines were very helpful."</p>
-                                </div>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 
