@@ -23,6 +23,7 @@ class OrderRepository extends BaseRepository {
     return this.model.find(filter)
       .populate('user', 'fullName email')
       .populate('course', 'title price')
+      .populate('class', 'code startDate endDate')
       .sort({ createdAt: -1 });
   }
 
@@ -49,3 +50,5 @@ class OrderRepository extends BaseRepository {
 }
 
 module.exports = new OrderRepository();
+
+

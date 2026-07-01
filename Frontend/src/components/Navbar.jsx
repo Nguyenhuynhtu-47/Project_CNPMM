@@ -36,6 +36,7 @@ const Navbar = () => {
         .slice(0, 2)
         .map((word) => word[0]?.toUpperCase())
         .join('') || 'TK';
+    const avatarUrl = user?.avatar || '';
 
     return (
         <header className="app-navbar navbar navbar-expand-lg navbar-light py-2">
@@ -88,7 +89,11 @@ const Navbar = () => {
                             data-bs-toggle="dropdown"
                             aria-expanded="false"
                         >
-                            <span className="account-avatar">{initials}</span>
+                            <span className="account-avatar overflow-hidden">
+                                {avatarUrl ? (
+                                    <img src={avatarUrl} alt="Avatar" className="w-100 h-100" style={{ objectFit: 'cover' }} />
+                                ) : initials}
+                            </span>
                             <span className="d-none d-md-inline font-medium text-dark">{displayName}</span>
                         </button>
                         <ul className="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 mt-2 py-2 account-menu">
@@ -131,3 +136,5 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
+
