@@ -2,15 +2,15 @@ const courseService = require('../service/courseService');
 const { sendSuccess, sendError } = require('../utils/response');
 const { uploadDataUri } = require('../utils/cloudinary');
 
-// const createCourse = async (req, res) => {
-//   try {
-//     const course = await courseService.createCourse(req.body);
-//     return sendSuccess(res, { statusCode: 201, message: 'Course created', data: { course } });
-//   } catch (error) {
-//     console.error(error);
-//     return sendError(res, { message: 'Cannot create course' });
-//   }
-// };
+const createCourse = async (req, res) => {
+  try {
+    const course = await courseService.createCourse(req.body);
+    return sendSuccess(res, { statusCode: 201, message: 'Course created', data: { course } });
+  } catch (error) {
+    console.error(error);
+    return sendError(res, { message: 'Cannot create course' });
+  }
+};
 
 const getCourses = async (req, res) => {
   try {
@@ -22,16 +22,16 @@ const getCourses = async (req, res) => {
   }
 };
 
-// const getCourseById = async (req, res) => {
-//   try {
-//     const course = await courseService.getCourseById(req.params.id);
-//     if (!course) return sendError(res, { statusCode: 404, message: 'Course not found' });
-//     return sendSuccess(res, { data: { course } });
-//   } catch (error) {
-//     console.error(error);
-//     return sendError(res, { message: 'Cannot load course' });
-//   }
-// };
+const getCourseById = async (req, res) => {
+  try {
+    const course = await courseService.getCourseById(req.params.id);
+    if (!course) return sendError(res, { statusCode: 404, message: 'Course not found' });
+    return sendSuccess(res, { data: { course } });
+  } catch (error) {
+    console.error(error);
+    return sendError(res, { message: 'Cannot load course' });
+  }
+};
 
 const getCourseChapters = async (req, res) => {
   try {
