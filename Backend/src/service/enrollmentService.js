@@ -11,6 +11,10 @@ const getExistingEnrollment = async (userId, courseId) => {
   return enrollmentRepository.findActiveByUserAndCourse(userId, courseId);
 };
 
+const getUnfinishedEnrollment = async (userId, courseId) => {
+  return enrollmentRepository.findUnfinishedByUserAndCourse(userId, courseId);
+};
+
 const calculateCourseProgress = async (userId, courseId) => {
   const chapters = await chapterRepository.findByCourse(courseId);
   const chapterIds = chapters.map((chapter) => chapter._id);
@@ -48,8 +52,8 @@ const assignStudentToClass = async (userId, courseId) => {
   const course = await courseRepository.findById(courseId);
   if (!course) throw new Error('COURSE_NOT_FOUND');
 
-  const existingEnrollment = await getExistingEnrollment(userId, courseId);
-  if (existingEnrollment) return enrollmentDto.toEnrollmentResponse(existingEnrollment);
+  const unfinishedEnrollment = await getUnfinishedEnrollment(userId, courseId);
+  if (unfinishedEnrollment) throw new Error('COURSE_ALREADY_ENROLLED');
 
   const classes = await classRepository.findAssignableClasses(courseId);
   const targetClass = classes[0];
@@ -156,6 +160,7 @@ const approveCourseCompletion = async ({ enrollmentId, teacherId, note = '' }) =
 
 module.exports = {
   getExistingEnrollment,
+  getUnfinishedEnrollment,
   createEnrollment,
   assignStudentToClass,
   getEnrollmentById,
@@ -167,3 +172,4 @@ module.exports = {
   getEnrollmentsForUser,
   getEnrollments
 };
+
