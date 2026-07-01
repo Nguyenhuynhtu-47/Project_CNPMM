@@ -20,7 +20,7 @@ const Orders = () => {
                 const response = await getOrders();
                 setOrders(response.data.orders);
             } catch {
-                setError('Không thể tải lịch sử đơn hàng.');
+                setError('Unable to load order history.');
             } finally {
                 setLoading(false);
             }
@@ -47,7 +47,7 @@ const Orders = () => {
                 ) : (
                     <div className="row gy-4">
                         {orders.length === 0 ? (
-                            <div className="alert alert-secondary">Bạn chưa có đơn hàng nào.</div>
+                            <div className="alert alert-secondary">You do not have any orders yet.</div>
                         ) : (
                             visibleOrders.map((order) => (
                                 <div className="col-12" key={order._id}>
@@ -59,9 +59,9 @@ const Orders = () => {
                                             <p className="card-text">Status: {order.status}</p>
                                             <p className="card-text">Method: {order.paymentMethod}</p>
                                             {order.class ? (
-                                                <p className="card-text">Class: {order.class.name}</p>
+                                                <p className="card-text">Class: {order.class.code || order.class.name || 'Assigned class'}</p>
                                             ) : (
-                                                <p className="card-text text-muted">Chưa phân lớp</p>
+                                                <p className="card-text text-muted">Class: Not assigned yet</p>
                                             )}
                                         </div>
                                     </div>
@@ -87,3 +87,4 @@ const Orders = () => {
 };
 
 export default Orders;
+
