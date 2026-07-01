@@ -19,6 +19,7 @@ const Profile = lazy(() => import('./pages/Profile'));
 const Courses = lazy(() => import('./pages/Courses'));
 const CourseDetail = lazy(() => import('./pages/CourseDetail'));
 const Checkout = lazy(() => import('./pages/Checkout'));
+const PaymentResult = lazy(() => import('./pages/PaymentResult'));
 const QuizTake = lazy(() => import('./pages/QuizTake'));
 const Notifications = lazy(() => import('./components/Notifications'));
 const Enrollments = lazy(() => import('./pages/Enrollments'));
@@ -140,6 +141,16 @@ function App() {
               <ProtectedRoute roles={['STUDENT', 'USER', 'ADMIN']}>
                 <ProtectedLayout>
                   <Checkout />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payment-result"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <PaymentResult />
                 </ProtectedLayout>
               </ProtectedRoute>
             }
@@ -286,3 +297,6 @@ function App() {
 }
 
 export default App;
+
+
+

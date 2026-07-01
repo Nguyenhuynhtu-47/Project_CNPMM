@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import CourseImage from '../components/CourseImage';
 import { createVnpayPayment, previewPayment } from '../services/payment';
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')} VND`;
 
 const Checkout = () => {
+    const navigate = useNavigate();
     const { courseId } = useParams();
     const [form, setForm] = useState({ couponCode: '', pointsToUse: '' });
     const [preview, setPreview] = useState(null);
@@ -52,8 +53,12 @@ const Checkout = () => {
                 pointsToUse: Number(form.pointsToUse || 0)
             });
             if (response.data.paid) {
-                setSuccess('Payment completed with coupon or loyalty points.');
-                await loadPreview(form);
+                const params = new URLSearchParams({
+                    status: 'success',
+                    orderId: response.data.orderId,
+                    message: 'Payment completed with coupon or loyalty points'
+                });
+                navigate('/payment-result?' + params.toString());
                 return;
             }
             window.location.href = response.data.paymentUrl;
@@ -156,3 +161,6 @@ const Checkout = () => {
 };
 
 export default Checkout;
+
+
+

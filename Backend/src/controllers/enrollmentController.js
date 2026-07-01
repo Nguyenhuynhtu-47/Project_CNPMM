@@ -8,6 +8,9 @@ const enrollInCourse = async (req, res) => {
     if (error.message === 'COURSE_NOT_FOUND') {
       return res.status(404).json({ message: 'Course not found' });
     }
+    if (error.message === 'COURSE_ALREADY_ENROLLED') {
+      return res.status(409).json({ message: 'You are already learning this course.' });
+    }
     console.error(error);
     return res.status(500).json({ message: 'Cannot enroll in course' });
   }
@@ -61,3 +64,4 @@ module.exports = {
   getEnrollmentById,
   updateEnrollmentProgress
 };
+
