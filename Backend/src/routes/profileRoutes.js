@@ -10,6 +10,8 @@ const { authenticateToken } = require('../middleware/authMiddleware');
 
 const { profileUpdateLimiter } = require('../middleware/rateLimitMiddleware');
 
-router.put('/profile', profileUpdateLimiter, authenticateToken, updateProfileValidator, profileController.updateProfile);
+const upload = require('../middleware/uploadMiddleware');
+
+router.put('/profile', profileUpdateLimiter, authenticateToken, upload.single('avatar'), updateProfileValidator, profileController.updateProfile);
 
 module.exports = router;

@@ -4,6 +4,9 @@ const { validationResult } =
 const profileService =
     require("../service/profileService");
 
+const { uploadDataUri } =
+    require("../utils/cloudinary");
+
 const updateProfile = async (
     req,
     res
@@ -21,10 +24,38 @@ const updateProfile = async (
             });
         }
 
+        const profileData = {
+            ...req.body
+        };
+
+        if (req.file) {
+
+            if (!req.file.mimetype.startsWith('image/')) {
+
+                return res.status(400).json({
+                    message: "Avatar phải là file ảnh."
+                });
+            }
+
+            const dataUri =
+                `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+            const uploadResult =
+                await uploadDataUri(
+                    dataUri,
+                    {
+                        folder: "elms/users/avatars"
+                    }
+                );
+
+            profileData.avatar =
+                uploadResult.secure_url;
+        }
+
         const updatedUser =
             await profileService.updateProfile(
                 req.user._id,
-                req.body
+                profileData
             );
 
         return res.status(200).json({
