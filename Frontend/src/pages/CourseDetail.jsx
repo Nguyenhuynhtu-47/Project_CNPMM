@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getCourseById } from '../services/course';
 import { enrollInCourse } from '../services/enrollment';
+import { useSelector } from 'react-redux';
+import { getWishlist } from '../services/wishlist';
 import CourseImage from '../components/CourseImage';
+import WishlistButton from '../components/WishlistButton';
 
 const CourseDetail = () => {
     const { id } = useParams();
@@ -11,6 +14,19 @@ const CourseDetail = () => {
     const [error, setError] = useState(null);
     const [enrollLoading, setEnrollLoading] = useState(false);
     const [success, setSuccess] = useState(null);
+    const { user } = useSelector((state) => state.auth);
+    const [wishlistIds, setWishlistIds] = useState(new Set());
+
+    useEffect(() => {
+        if (user) {
+            getWishlist().then(res => {
+                const ids = res.data.wishlists?.map(w => w.course?._id || w.course) || [];
+                setWishlistIds(new Set(ids));
+            }).catch(err => console.error('Failed to fetch wishlist', err));
+        } else {
+            setWishlistIds(new Set());
+        }
+    }, [user]);
 
     useEffect(() => {
         const loadCourse = async () => {
@@ -166,6 +182,12 @@ const CourseDetail = () => {
                         <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
                             <div style={{ height: '180px', position: 'relative' }}>
                                 <CourseImage course={course} className="w-100 h-100 object-fit-cover" />
+                                <WishlistButton 
+                                    courseId={course._id} 
+                                    initialIsWishlisted={wishlistIds.has(course._id)} 
+                                    isLoggedIn={!!user} 
+                                    className="position-absolute top-0 end-0 m-3"
+                                />
                             </div>
                             <div className="card-body p-4">
                                 <h3 className="fw-bold text-primary mb-3.5">{course.price?.toLocaleString('vi-VN')} VND</h3>
