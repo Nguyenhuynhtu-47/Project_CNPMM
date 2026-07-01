@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -30,4 +29,4 @@ const ProtectedLayout = ({ children }) => {
     );
 };
 
-export default ProtectedLayout;
+export default ProtectedLayout;

@@ -15,6 +15,8 @@ router.post(
   [
     body('class').isMongoId().withMessage('Class id is required'),
     body('watchedPercent').optional().isFloat({ min: 0, max: 100 }),
+    body('attendanceDate').optional().isISO8601().withMessage('Attendance date must be a valid date'),
+    body('date').optional().isISO8601().withMessage('Attendance date must be a valid date'),
     validate
   ],
   attendanceController.markAttendance

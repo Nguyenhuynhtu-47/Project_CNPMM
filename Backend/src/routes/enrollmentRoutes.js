@@ -18,6 +18,6 @@ router.patch('/:id/progress', authenticateToken, [
   param('id').isMongoId(),
   body('progress').isInt({ min: 0, max: 100 }).withMessage('Progress must be 0-100'),
   validate
-], enrollmentController.updateEnrollmentProgress);
+], authorizePermissions('ENROLLMENT_MANAGE'), enrollmentController.updateEnrollmentProgress);
 
 module.exports = router;
