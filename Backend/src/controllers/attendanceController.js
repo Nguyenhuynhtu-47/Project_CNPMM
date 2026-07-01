@@ -4,6 +4,13 @@ const { normalizeRoleCode } = require('../service/rbacService');
 
 const getRole = (req) => normalizeRoleCode(req.user?.roleRef?.code || req.user?.role);
 
+const normalizeAttendanceDate = (value) => {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
 const markAttendance = async (req, res) => {
   try {
     const classId = req.body.class;
@@ -16,12 +23,15 @@ const markAttendance = async (req, res) => {
     const watchedPercent = Number(req.body.watchedPercent || 0);
     const method = req.body.method || 'ONLINE_CLASS';
     const attended = method === 'VIDEO_WATCH' ? watchedPercent >= 80 : Boolean(req.body.attended ?? true);
+    const attendanceDate = normalizeAttendanceDate(req.body.attendanceDate || req.body.date || req.body.attendedAt);
+    if (!attendanceDate) return res.status(400).json({ message: 'Attendance date is invalid' });
 
     const attendance = await Attendance.findOneAndUpdate(
       {
         user: req.body.user || req.user._id,
         class: req.body.class,
-        lesson: req.body.lesson || null
+        lesson: req.body.lesson || null,
+        attendanceDate
       },
       {
         user: req.body.user || req.user._id,
@@ -30,7 +40,8 @@ const markAttendance = async (req, res) => {
         method,
         watchedPercent,
         attended,
-        attendedAt: new Date(),
+        attendanceDate,
+        attendedAt: req.body.attendedAt ? new Date(req.body.attendedAt) : new Date(),
         note: req.body.note
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
@@ -48,6 +59,11 @@ const listAttendance = async (req, res) => {
     const query = {};
     if (req.query.class) query.class = req.query.class;
     if (req.query.user) query.user = req.query.user;
+    if (req.query.attendanceDate || req.query.date) {
+      const attendanceDate = normalizeAttendanceDate(req.query.attendanceDate || req.query.date);
+      if (!attendanceDate) return res.status(400).json({ message: 'Attendance date is invalid' });
+      query.attendanceDate = attendanceDate;
+    }
     if (req.query.class) {
       const allowed = await canAccessClass(req.user, req.query.class);
       if (!allowed) return res.status(403).json({ message: 'You cannot access this class attendance' });
@@ -60,7 +76,7 @@ const listAttendance = async (req, res) => {
       .populate('user', 'fullName email')
       .populate('class', 'code')
       .populate('lesson', 'title')
-      .sort({ attendedAt: -1 });
+      .sort({ attendanceDate: -1, attendedAt: -1 });
 
     return res.status(200).json({ attendances });
   } catch (error) {
@@ -74,7 +90,7 @@ const getMyAttendance = async (req, res) => {
     const attendances = await Attendance.find({ user: req.user._id })
       .populate('class', 'code')
       .populate('lesson', 'title')
-      .sort({ attendedAt: -1 });
+      .sort({ attendanceDate: -1, attendedAt: -1 });
 
     return res.status(200).json({ attendances });
   } catch (error) {

@@ -37,6 +37,24 @@ const getQuizzesByClass = async (classId) => {
   return Quiz.find({ class: classId }).sort({ createdAt: -1 });
 };
 
+const getLatestSubmittedResultsForUser = async (quizIds = [], userId) => {
+  if (!quizIds.length || !userId) return {};
+
+  const results = await QuizResult.find({
+    quiz: { $in: quizIds },
+    user: userId,
+    status: 'SUBMITTED'
+  }).sort({ submittedAt: -1, createdAt: -1 });
+
+  return results.reduce((acc, result) => {
+    const quizId = String(result.quiz);
+    if (!acc[quizId]) {
+      acc[quizId] = result;
+    }
+    return acc;
+  }, {});
+};
+
 const getQuizById = async (id) => {
   return Quiz.findById(id).populate('class', 'code teacher course');
 };
@@ -141,5 +159,6 @@ module.exports = {
   getQuizzesByClass,
   getQuizById,
   startAttempt,
-  gradeSubmission
+  gradeSubmission,
+  getLatestSubmittedResultsForUser
 };
