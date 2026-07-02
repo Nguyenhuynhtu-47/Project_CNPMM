@@ -29,24 +29,13 @@ const updateProfile = async (
         };
 
         if (req.file) {
-
-            if (!req.file.mimetype.startsWith('image/')) {
-
-                return res.status(400).json({
-                    message: "Avatar phải là file ảnh."
-                });
-            }
-
             const dataUri =
                 `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
 
             const uploadResult =
-                await uploadDataUri(
-                    dataUri,
-                    {
-                        folder: "elms/users/avatars"
-                    }
-                );
+                await uploadDataUri(dataUri, {
+                    folder: 'elms/users/avatars'
+                });
 
             profileData.avatar =
                 uploadResult.secure_url;
@@ -59,7 +48,7 @@ const updateProfile = async (
             );
 
         return res.status(200).json({
-            message: "Cập nhật profile thành công.",
+            message: "Profile updated successfully.",
             data: updatedUser
         });
 
@@ -68,7 +57,7 @@ const updateProfile = async (
         console.log(error);
 
         return res.status(500).json({
-            message: "Lỗi Server Internal"
+            message: "Internal server error"
         });
     }
 };
@@ -76,3 +65,4 @@ const updateProfile = async (
 module.exports = {
     updateProfile
 };
+

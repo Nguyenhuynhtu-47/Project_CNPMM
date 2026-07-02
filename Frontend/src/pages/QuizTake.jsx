@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext, useRef, useCallback } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import quizService from '../services/quiz';
 import { AuthContext } from '../context/AuthContext';
 import useSocket from '../hooks/useSocket';
@@ -16,8 +16,8 @@ export default function QuizTake() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [submittedResult, setSubmittedResult] = useState(null);
   const timerRef = useRef(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
@@ -42,15 +42,21 @@ export default function QuizTake() {
     try {
       const payload = Object.keys(answers).map(k => ({ questionId: k, answer: answers[k] }));
       const res = await quizService.submitQuiz(id, payload);
-      setMessage(`${auto ? 'Auto-submitted' : 'Submitted'}. Score: ${res.data.score}`);
-      window.setTimeout(() => navigate('/my-learning'), 1200);
+      setSubmittedResult({
+        score: res.data.score,
+        passed: res.data.passed,
+        attemptNumber: res.data.result?.attemptNumber,
+        auto
+      });
+      setMessage(auto ? 'Time is up. Your quiz was auto-submitted.' : 'Quiz submitted successfully.');
+      if (timerRef.current) clearInterval(timerRef.current);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.message || 'Submission failed');
     } finally {
       setSubmitting(false);
     }
-  }, [answers, id, navigate, quiz, submitting]);
+  }, [answers, id, quiz, submitting]);
 
   useEffect(() => {
     if (!quiz) return;
@@ -80,15 +86,27 @@ export default function QuizTake() {
     return undefined;
   }, [timeLeft, handleSubmit]);
 
+  const questions = quiz?.questions || [];
+  const safeCurrentQuestionIndex = questions.length ? Math.min(currentQuestionIndex, questions.length - 1) : 0;
+  const currentQuestion = questions[safeCurrentQuestionIndex];
+  const answeredCount = Object.keys(answers).filter((key) => answers[key] !== undefined && answers[key] !== '').length;
+  const isFirstQuestion = safeCurrentQuestionIndex === 0;
+  const isLastQuestion = safeCurrentQuestionIndex === questions.length - 1;
+  const currentAnswer = currentQuestion ? answers[currentQuestion._id] || '' : '';
   const handleChange = (qId, value) => setAnswers(a => ({ ...a, [qId]: value }));
 
-  const questions = quiz?.questions || [];
-  const currentQuestion = questions[currentQuestionIndex];
-  const answeredCount = Object.keys(answers).filter((key) => answers[key] !== undefined && answers[key] !== '').length;
-  const progressPercent = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0;
-  const isFirstQuestion = currentQuestionIndex === 0;
-  const isLastQuestion = currentQuestionIndex === questions.length - 1;
-  const currentAnswer = currentQuestion ? answers[currentQuestion._id] || '' : '';
+  const goToQuestion = (index) => {
+    setCurrentQuestionIndex(Math.min(Math.max(index, 0), Math.max(questions.length - 1, 0)));
+  };
+
+  const handlePreviousQuestion = () => {
+    goToQuestion(safeCurrentQuestionIndex - 1);
+  };
+
+  const handleNextQuestion = () => {
+    if (isLastQuestion) return;
+    goToQuestion(safeCurrentQuestionIndex + 1);
+  };
   const formatTime = (seconds) => {
     const safeSeconds = Math.max(0, Number(seconds || 0));
     const minutes = Math.floor(safeSeconds / 60);
@@ -121,32 +139,45 @@ export default function QuizTake() {
       {message && <div className="alert alert-success">{message}</div>}
       {error && <div className="alert alert-danger">{error}</div>}
 
-        <div className="quiz-progress-card">
-          <div className="d-flex justify-content-between gap-3">
-            <span>Question {currentQuestionIndex + 1} of {questions.length}</span>
-            <span>{answeredCount}/{questions.length} answered</span>
+        {submittedResult && (
+          <div className="alert alert-light border shadow-sm d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+              <div className="text-muted small fw-semibold text-uppercase">Quiz result</div>
+              <div className="display-6 fw-bold mb-0">{submittedResult.score}/100</div>
+              <div className={submittedResult.passed ? 'text-success fw-semibold' : 'text-danger fw-semibold'}>
+                {submittedResult.passed ? 'Passed' : 'Failed'}
+                {submittedResult.attemptNumber ? ` - Attempt #${submittedResult.attemptNumber}` : ''}
+              </div>
+            </div>
+            <Link className="btn btn-primary" to="/my-learning">Back to My learning</Link>
           </div>
-          <div className="progress mt-2">
-            <div className="progress-bar" style={{ width: `${progressPercent}%` }} aria-valuenow={progressPercent} aria-valuemin="0" aria-valuemax="100" />
-          </div>
-          <div className="quiz-question-dots" aria-label="Question navigation">
-            {questions.map((question, index) => (
-              <button
-                key={question._id}
-                type="button"
-                className={`quiz-dot ${index === currentQuestionIndex ? 'quiz-dot--active' : ''} ${answers[question._id] ? 'quiz-dot--answered' : ''}`}
-                onClick={() => setCurrentQuestionIndex(index)}
-                aria-label={`Go to question ${index + 1}`}
-              >
-                {index + 1}
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
-        {currentQuestion ? (
-          <form className="quiz-question-card" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-            <div className="quiz-question-label">Question {currentQuestionIndex + 1}</div>
+        {!submittedResult && questions.length > 0 && (
+          <div className="quiz-question-nav-card">
+            <div className="d-flex justify-content-between gap-3">
+              <span>Question {safeCurrentQuestionIndex + 1} of {questions.length}</span>
+              <span>{answeredCount}/{questions.length} answered</span>
+            </div>
+            <div className="quiz-question-dots" aria-label="Question navigation">
+              {questions.map((question, index) => (
+                <button
+                  key={question._id}
+                  type="button"
+                  className={`quiz-dot ${index === safeCurrentQuestionIndex ? 'quiz-dot--active' : ''} ${answers[question._id] ? 'quiz-dot--answered' : ''}`}
+                  onClick={() => goToQuestion(index)}
+                  aria-label={`Go to question ${index + 1}`}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {currentQuestion && !submittedResult ? (
+          <div className="quiz-question-card">
+            <div className="quiz-question-label">Question {safeCurrentQuestionIndex + 1}</div>
             <h3>{currentQuestion.text}</h3>
 
             {currentQuestion.type === 'MULTIPLE_CHOICE' && (
@@ -179,23 +210,23 @@ export default function QuizTake() {
             )}
 
             <div className="quiz-actions">
-              <button className="btn btn-outline-secondary" type="button" disabled={isFirstQuestion} onClick={() => setCurrentQuestionIndex((index) => Math.max(index - 1, 0))}>
+              <button className="btn btn-outline-secondary" type="button" disabled={isFirstQuestion} onClick={handlePreviousQuestion}>
                 Previous
               </button>
               {!isLastQuestion ? (
-                <button className="btn btn-primary" type="button" onClick={() => setCurrentQuestionIndex((index) => Math.min(index + 1, questions.length - 1))}>
+                <button className="btn btn-primary" type="button" onClick={handleNextQuestion}>
                   Next question
                 </button>
               ) : (
-                <button className="btn btn-primary" type="submit" disabled={submitting || answeredCount === 0}>
+                <button className="btn btn-primary" type="button" disabled={submitting || answeredCount === 0} onClick={() => handleSubmit()}>
                   {submitting ? 'Submitting...' : 'Submit quiz'}
                 </button>
               )}
             </div>
-          </form>
-        ) : (
+          </div>
+        ) : !submittedResult ? (
           <div className="alert alert-secondary">This quiz has no questions yet.</div>
-        )}
+        ) : null}
       </div>
     </div>
   );

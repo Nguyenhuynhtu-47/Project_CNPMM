@@ -33,16 +33,6 @@ const getCourseById = async (req, res) => {
   }
 };
 
-const getCourseProgress = async (req, res) => {
-  try {
-    const progress = await courseService.getCourseProgress(req.user._id, req.params.id);
-    return sendSuccess(res, { data: { progress } });
-  } catch (error) {
-    console.error(error);
-    return sendError(res, { message: 'Cannot load course progress' });
-  }
-};
-
 const updateCourse = async (req, res) => {
   try {
     const course = await courseService.updateCourse(req.params.id, req.body);
@@ -127,7 +117,6 @@ module.exports = {
   createCourse,
   getCourses,
   getCourseById,
-  getCourseProgress,
   updateCourse,
   uploadCourseImage,
   deleteCourse,

@@ -1,9 +1,5 @@
 const courseRepository = require('../repositories/courseRepository');
 const categoryRepository = require('../repositories/categoryRepository');
-const chapterRepository = require('../repositories/chapterRepository');
-const enrollmentRepository = require('../repositories/enrollmentRepository');
-const lessonRepository = require('../repositories/lessonRepository');
-const lessonProgressRepository = require('../repositories/lessonProgressRepository');
 const courseDto = require('../dtos/courseDto');
 
 const buildCourseQuery = (filters = {}) => {
@@ -24,11 +20,11 @@ const buildCourseQuery = (filters = {}) => {
     query.status = filters.status;
   }
 
-  if (filters.minPrice != null) {
+  if (filters.minPrice != null && filters.minPrice !== '') {
     query.price = { ...(query.price || {}), $gte: Number(filters.minPrice) };
   }
 
-  if (filters.maxPrice != null) {
+  if (filters.maxPrice != null && filters.maxPrice !== '') {
     query.price = { ...(query.price || {}), $lte: Number(filters.maxPrice) };
   }
 
@@ -78,30 +74,6 @@ const getCourseById = async (id) => {
   return courseDto.toCourseResponse(course);
 };
 
-const getCourseProgress = async (userId, courseId) => {
-  const enrollment = await enrollmentRepository.findByUserAndCourse(userId, courseId);
-  const chapters = enrollment?.class
-    ? await chapterRepository.findByClass(enrollment.class)
-    : await chapterRepository.findByCourse(courseId);
-  const chapterIds = chapters.map((chapter) => chapter._id);
-  const totalLessons = await lessonRepository.countPublishedByChapters(chapterIds);
-  const completedLessons = enrollment?.class
-    ? await lessonProgressRepository.countCompletedLessonsByClass(userId, enrollment.class)
-    : await lessonProgressRepository.countCompletedLessons(userId, courseId);
-  const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-
-  if (!enrollment) {
-    return { completedLessons, totalLessons, progress: 0, status: 'NOT_ENROLLED' };
-  }
-
-  return {
-    completedLessons,
-    totalLessons,
-    progress,
-    status: enrollment.status
-  };
-};
-
 const updateCourse = async (id, courseData) => {
   const payload = courseDto.toCoursePayload(courseData);
   const course = await courseRepository.updateById(id, payload);
@@ -134,7 +106,6 @@ module.exports = {
   createCourse,
   getCourses,
   getCourseById,
-  getCourseProgress,
   updateCourse,
   deleteCourse,
   createCategory,

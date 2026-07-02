@@ -61,7 +61,29 @@ const getQuizzesByClass = async (req, res) => {
     }
 
     const quizzes = await quizService.getQuizzesByClass(classId);
-    return res.status(200).json({ quizzes });
+    const quizPayload = quizzes.map((quiz) => quiz.toObject());
+
+    if (!['ADMIN', 'MANAGER', 'TEACHER'].includes(role)) {
+      const latestResults = await quizService.getLatestSubmittedResultsForUser(
+        quizPayload.map((quiz) => quiz._id),
+        req.user._id
+      );
+
+      quizPayload.forEach((quiz) => {
+        const result = latestResults[String(quiz._id)];
+        quiz.latestResult = result
+          ? {
+              attemptNumber: result.attemptNumber,
+              score: result.score,
+              passed: result.passed,
+              submittedAt: result.submittedAt,
+              durationSeconds: result.durationSeconds
+            }
+          : null;
+      });
+    }
+
+    return res.status(200).json({ quizzes: quizPayload });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Cannot load quizzes' });

@@ -156,7 +156,7 @@ exports.completeLesson = async (req, res) => {
     const allowed = await canAccessClass(req.user, classId);
     const role = normalizeRoleCode(req.user?.roleRef?.code || req.user?.role);
     if (!allowed || ['ADMIN', 'TEACHER', 'MANAGER'].includes(role)) {
-      return res.status(403).json({ message: 'You cannot complete this lesson' });
+      return res.status(403).json({ message: 'You cannot record lesson activity' });
     }
 
     try {
@@ -165,11 +165,11 @@ exports.completeLesson = async (req, res) => {
       if (error.code !== 11000) throw error;
     }
 
-    const { completedLessons, totalLessons, progress } = await enrollmentService.refreshEnrollmentProgress(userId, courseId, classId);
+    const { completedLessons, totalLessons } = await enrollmentService.refreshEnrollmentProgress(userId, courseId, classId);
 
-    return res.status(200).json({ message: 'Lesson marked complete', completedLessons, totalLessons, progress });
+    return res.status(200).json({ message: 'Lesson activity recorded', completedLessons, totalLessons });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Unable to mark lesson complete', error: error.message });
+    return res.status(500).json({ message: 'Unable to record lesson activity', error: error.message });
   }
 };

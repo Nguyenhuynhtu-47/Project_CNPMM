@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { register as registerAccount } from '../services/auth';
+import PasswordVisibilityIcon from '../components/PasswordVisibilityIcon';
 
 const registerSchema = yup.object({
     email: yup.string().email('Email is invalid').required('Email is required'),
@@ -58,19 +59,34 @@ const Register = () => {
     };
 
     return (
-        <section className="auth-card-grid">
+        <section className="auth-card-grid auth-card-grid--register">
             <div className="auth-copy-panel auth-copy-panel--register">
-                <span className="eyebrow">Create account</span>
                 <h1>Create a student account and unlock the course catalog.</h1>
-                <p>After registration, you will receive an OTP by email to activate your account.</p>
-                <div className="feature-stack">
+                <div className="feature-stack feature-stack--register">
                     <div>
-                        <strong>Email verification</strong>
-                        <span>You must verify your email before logging in.</span>
+                        <span className="feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" focusable="false">
+                                <path d="M4 6h16v12H4z" />
+                                <path d="m4 8 8 6 8-6" />
+                                <path d="m18 17 3 3 4-5" />
+                            </svg>
+                        </span>
+                        <span>
+                            <strong>Email verification</strong>
+                            <small>You must verify your email before logging in.</small>
+                        </span>
                     </div>
                     <div>
-                        <strong>Course ready</strong>
-                        <span>After this step, you are ready to enter the learning system.</span>
+                        <span className="feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" focusable="false">
+                                <path d="m3 8 9-4 9 4-9 4z" />
+                                <path d="M7 10v5c0 1.5 2.2 3 5 3s5-1.5 5-3v-5" />
+                            </svg>
+                        </span>
+                        <span>
+                            <strong>Course ready</strong>
+                            <small>After this step, you are ready to enter the learning system.</small>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -79,7 +95,6 @@ const Register = () => {
                 <div className="auth-form-card">
                     <span className="eyebrow">Register</span>
                     <h2>Register</h2>
-                    <p className="auth-helper">Create a new account to start learning.</p>
 
                     {error ? <div className="alert alert-danger py-2">{error}</div> : null}
                     {success ? <div className="alert alert-success py-2">{success}</div> : null}
@@ -111,7 +126,7 @@ const Register = () => {
                                     onClick={() => setShowPassword((value) => !value)}
                                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                                 >
-                                    {showPassword ? 'Hide' : 'Show'}
+                                    <PasswordVisibilityIcon visible={showPassword} />
                                 </button>
                             </div>
                             {errors.password ? <span className="text-danger small">{errors.password.message}</span> : null}
@@ -132,7 +147,7 @@ const Register = () => {
                                     onClick={() => setShowConfirmPassword((value) => !value)}
                                     aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                                 >
-                                    {showConfirmPassword ? 'Hide' : 'Show'}
+                                    <PasswordVisibilityIcon visible={showConfirmPassword} />
                                 </button>
                             </div>
                             {errors.confirmPassword ? <span className="text-danger small">{errors.confirmPassword.message}</span> : null}

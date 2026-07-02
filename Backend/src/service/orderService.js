@@ -17,6 +17,9 @@ const createOrder = async ({ userId, courseId, currency = 'VND', paymentMethod =
   const course = await courseRepository.findById(courseId);
   if (!course) throw new Error('COURSE_NOT_FOUND');
 
+  const unfinishedEnrollment = await enrollmentService.getUnfinishedEnrollment(userId, courseId);
+  if (unfinishedEnrollment) throw new Error('COURSE_ALREADY_ENROLLED');
+
   const subtotal = Number(course.price || 0);
   const couponResult = await couponService.validateCoupon({ code: couponCode, userId, subtotal });
   const afterCouponAmount = Math.max(subtotal - couponResult.discount, 0);
@@ -55,6 +58,9 @@ const createOrder = async ({ userId, courseId, currency = 'VND', paymentMethod =
 const previewOrder = async ({ userId, courseId, couponCode = '', pointsToUse = 0 }) => {
   const course = await courseRepository.findById(courseId);
   if (!course) throw new Error('COURSE_NOT_FOUND');
+
+  const unfinishedEnrollment = await enrollmentService.getUnfinishedEnrollment(userId, courseId);
+  if (unfinishedEnrollment) throw new Error('COURSE_ALREADY_ENROLLED');
 
   const subtotal = Number(course.price || 0);
   const couponResult = await couponService.validateCoupon({ code: couponCode, userId, subtotal });
@@ -263,3 +269,5 @@ module.exports = {
   getOrders,
   cancelExpiredPendingOrders
 };
+
+

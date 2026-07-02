@@ -4,6 +4,10 @@ const classDto = require('../dtos/classDto');
 const buildClassQuery = (filters = {}) => {
   const query = {};
 
+  if (filters.code) {
+    query.code = { $regex: filters.code, $options: 'i' };
+  }
+
   if (filters.course) {
     query.course = filters.course;
   }

@@ -1,19 +1,51 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAssignments, submitAssignment } from '../services/assignment';
-import { getMyAttendance, markAttendance } from '../services/attendance';
+import { getMyAttendance } from '../services/attendance';
 import { getMyCertificates, getCertificatePdfUrl } from '../services/certificate';
 import { getChaptersByClass } from '../services/chapter';
 import { createClassComment, getClassComments } from '../services/discussion';
-import { getEnrollments } from '../services/enrollment';
-import { completeLesson, getLessonsByChapter } from '../services/lesson';
+import { getEnrollments, startLearning } from '../services/enrollment';
+import { getLessonsByChapter } from '../services/lesson';
 import { getQuizzesByClass } from '../services/quiz';
 import { createReview, getCourseReviews } from '../services/review';
 import { addToWishlist, getWishlist, removeFromWishlist } from '../services/wishlist';
 import PaginationControls from '../components/PaginationControls';
+import { getEnrollmentStatusBadgeClass, getEnrollmentStatusLabel } from '../utils/enrollmentStatus';
 import { createPagination } from '../utils/pagination';
 
 const getId = (value) => value?._id || value || '';
+const formatAttendanceDate = (item) => {
+    const value = item.attendanceDate || item.attendedAt || item.createdAt;
+    return value ? new Date(value).toLocaleDateString('vi-VN') : '-';
+};
+
+const getYouTubeEmbedUrl = (url) => {
+    if (!url) return '';
+    try {
+        const parsedUrl = new URL(url);
+        const host = parsedUrl.hostname.replace(/^www\./, '');
+        let videoId = '';
+
+        if (host === 'youtube.com' || host === 'm.youtube.com') {
+            if (parsedUrl.pathname === '/watch') {
+                videoId = parsedUrl.searchParams.get('v') || '';
+            } else if (parsedUrl.pathname.startsWith('/embed/')) {
+                videoId = parsedUrl.pathname.split('/embed/')[1]?.split('/')[0] || '';
+            } else if (parsedUrl.pathname.startsWith('/shorts/')) {
+                videoId = parsedUrl.pathname.split('/shorts/')[1]?.split('/')[0] || '';
+            }
+        }
+
+        if (host === 'youtu.be') {
+            videoId = parsedUrl.pathname.replace('/', '').split('/')[0] || '';
+        }
+
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
+    } catch {
+        return '';
+    }
+};
 
 const StudentLearning = () => {
     const [enrollments, setEnrollments] = useState([]);
@@ -32,11 +64,13 @@ const StudentLearning = () => {
     const [commentForm, setCommentForm] = useState({ title: '', content: '' });
     const [submissionForm, setSubmissionForm] = useState({});
     const [pages, setPages] = useState({});
-    const [watchedPercent, setWatchedPercent] = useState(0);
     const [loading, setLoading] = useState(true);
     const [detailLoading, setDetailLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
+
+    // Tab state for the main learning area tabs
+    const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('quizzes');
 
     const selectedEnrollment = useMemo(
         () => enrollments.find((item) => item._id === selectedEnrollmentId) || enrollments[0],
@@ -135,6 +169,28 @@ const StudentLearning = () => {
         return () => window.clearTimeout(timer);
     }, [loadCourseDetails]);
 
+    useEffect(() => {
+        if (!selectedEnrollment?._id || selectedEnrollment.status !== 'ASSIGNED_CLASS') return undefined;
+
+        let cancelled = false;
+        const timer = window.setTimeout(async () => {
+            try {
+                const response = await startLearning(selectedEnrollment._id);
+                const updatedEnrollment = response.data.enrollment;
+                if (!cancelled && updatedEnrollment?._id) {
+                    setEnrollments((current) => current.map((item) => (item._id === updatedEnrollment._id ? updatedEnrollment : item)));
+                }
+            } catch {
+                // Keep the current status visible if the transition fails.
+            }
+        }, 0);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
+    }, [selectedEnrollment?._id, selectedEnrollment?.status]);
+
     const selectedCourseTitle = selectedEnrollment?.course?.title || 'Selected course';
     const isWishlisted = courseId ? wishlistCourseIds.has(courseId) : false;
     const paginate = (key, items) => createPagination(items, pages[key] || 1, 5);
@@ -162,29 +218,6 @@ const StudentLearning = () => {
             setWishlist(response.data.wishlists || []);
         } catch (requestError) {
             setError(requestError.response?.data?.message || 'Cannot update wishlist.');
-        }
-    };
-
-    const handleCompleteLesson = async () => {
-        if (!activeLesson?._id) return;
-        setError(null);
-        setSuccess(null);
-        try {
-            await completeLesson(activeLesson._id);
-            if (classId) {
-                await markAttendance({
-                    class: classId,
-                    lesson: activeLesson._id,
-                    method: 'VIDEO_WATCH',
-                    watchedPercent: Number(watchedPercent)
-                });
-                const attendanceRes = await getMyAttendance();
-                setAttendance(attendanceRes.data.attendances || []);
-            }
-            await loadBasics();
-            setSuccess('Lesson progress saved.');
-        } catch (requestError) {
-            setError(requestError.response?.data?.message || 'Cannot complete lesson.');
         }
     };
 
@@ -244,363 +277,484 @@ const StudentLearning = () => {
     };
 
     const renderLessonContent = () => {
-        if (!activeLesson) return <div className="alert alert-secondary">Choose a lesson to start learning.</div>;
+        if (!activeLesson) return <div className="alert alert-secondary text-center w-100 py-5 my-0">Choose a lesson from the curriculum panel to start studying.</div>;
         const type = activeLesson.contentType;
         const url = activeLesson.contentUrl;
 
         if (!url) {
-            return <p className="text-muted">{activeLesson.description || 'No lesson content URL is available yet.'}</p>;
+            return <p className="text-white opacity-75 px-4 text-center my-0">{activeLesson.description || 'No lesson content URL is available yet.'}</p>;
         }
 
         if (type === 'VIDEO') {
-            return <video className="w-100 rounded" src={url} controls />;
+            const youtubeEmbedUrl = getYouTubeEmbedUrl(url);
+            if (youtubeEmbedUrl) {
+                return (
+                    <iframe
+                        className="w-100 h-100 d-block rounded-3 border-0"
+                        src={youtubeEmbedUrl}
+                        title={activeLesson.title || 'YouTube lesson video'}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        style={{ minHeight: '420px', maxHeight: '480px' }}
+                    />
+                );
+            }
+            return <video className="w-100 h-100 d-block rounded-3" src={url} controls style={{ maxHeight: '480px', objectFit: 'contain' }} />;
         }
 
         if (type === 'AUDIO') {
-            return <audio className="w-100" src={url} controls />;
+            return (
+                <div className="w-100 p-4 bg-dark rounded-3 d-flex flex-column align-items-center justify-content-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary mb-3"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    <audio className="w-100" src={url} controls />
+                </div>
+            );
         }
 
         if (['PDF', 'DOCX', 'PPT'].includes(type)) {
-            return <iframe className="w-100 rounded border" src={url} title={activeLesson.title} style={{ minHeight: 420 }} />;
+            const isCloudinaryRaw = url.includes('/raw/upload/');
+            const isLocalUpload = url.includes('/uploads/lessons/');
+            return (
+                <div className="w-100 d-flex flex-wrap align-items-center justify-content-between gap-2 bg-white border rounded-3 px-3 py-2">
+                    <div className="d-flex align-items-center gap-2 min-w-0">
+                        <span className="badge bg-primary-subtle text-primary rounded-2 fw-bold px-2 py-1">{type}</span>
+                        <div className="min-w-0">
+                            <div className="fw-semibold text-dark small text-truncate">{activeLesson.title}</div>
+                            {isCloudinaryRaw && (
+                                <div className="text-danger small">Re-upload document materials so they are saved locally.</div>
+                            )}
+                        </div>
+                    </div>
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        download={isLocalUpload ? '' : undefined}
+                        className="btn btn-primary btn-sm rounded-3 fw-bold px-3 flex-shrink-0"
+                    >
+                        Open / Download
+                    </a>
+                </div>
+            );
         }
 
         return (
-            <a href={url} target="_blank" rel="noreferrer" className="btn btn-outline-primary">
-                Open lesson resource
-            </a>
+            <div className="p-4 text-center">
+                <a href={url} target="_blank" rel="noreferrer" className="btn btn-light px-4 py-2.5 rounded-3 fw-bold text-dark">
+                    Open lesson resource
+                </a>
+            </div>
         );
     };
 
     if (loading) {
-        return <div className="container py-5">Loading learning workspace...</div>;
+        return <div className="container-fluid py-5 text-center text-muted fw-semibold">Loading learning workspace...</div>;
     }
 
+    const activeLessonIsDocument = ['PDF', 'DOCX', 'PPT'].includes(activeLesson?.contentType);
+
     return (
-        <div className="container py-5">
-            <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div className="container-fluid px-0 py-3">
+            {/* Header Block */}
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4 p-4 bg-white rounded-4 border">
                 <div>
-                    <span className="eyebrow">Student workspace</span>
-                    <h2 className="mb-1">My Learning</h2>
-                    <p className="text-muted mb-0">Study lessons, submit work, join discussion, and track certificates.</p>
+                    <span className="badge bg-primary-subtle text-primary rounded-pill px-3 py-1.5 mb-2 text-uppercase fw-bold" style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>Student workspace</span>
+                    <h2 className="fw-bold mb-1 text-dark">My Learning</h2>
+                    <p className="text-muted mb-0 small">Study lessons, submit work, join discussion, and track certificates.</p>
                 </div>
-                <Link className="btn btn-outline-primary" to="/courses">Browse courses</Link>
+                <Link className="btn btn-outline-primary px-4 py-2 rounded-3 fw-bold flex-shrink-0" to="/courses">Browse courses</Link>
             </div>
 
-            {error && <div className="alert alert-danger">{error}</div>}
-            {success && <div className="alert alert-success">{success}</div>}
+            {error && <div className="alert alert-danger py-2.5 mb-4">{error}</div>}
+            {success && <div className="alert alert-success py-2.5 mb-4">{success}</div>}
 
             {enrollments.length === 0 ? (
-                <div className="alert alert-secondary">You have not enrolled in any course yet.</div>
+                <div className="alert alert-secondary py-3 text-center rounded-3">You have not enrolled in any course yet.</div>
             ) : (
-                <>
-                    <section className="card p-4 mb-4">
-                        <div className="row gy-3 align-items-end">
-                            <div className="col-lg-8">
-                                <label className="form-label" htmlFor="learning-course">Current enrollment</label>
+                <div className="row g-4">
+                    {/* LEFT COLUMN: Fixed Curriculum panel (25-30% width) */}
+                    <aside className="col-lg-4 col-xl-3">
+                        <div className="position-sticky d-flex flex-column gap-3" style={{ top: '24px', maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
+                            {/* Course Switcher selector inside sidebar */}
+                            <div className="card border-0 shadow-sm rounded-4 p-3.5">
+                                <label className="form-label small fw-semibold text-dark mb-1.5" htmlFor="learning-course">Current course</label>
                                 <select
                                     id="learning-course"
-                                    className="form-select"
+                                    className="form-select form-select-sm py-2 rounded-3 bg-light border-0"
                                     value={selectedEnrollment?._id || ''}
                                     onChange={(event) => setSelectedEnrollmentId(event.target.value)}
                                 >
                                     {enrollments.map((enrollment) => (
                                         <option key={enrollment._id} value={enrollment._id}>
-                                            {enrollment.course?.title || 'Untitled course'} - {enrollment.status}
+                                            {enrollment.course?.title || 'Untitled course'}
                                         </option>
                                     ))}
                                 </select>
-                            </div>
-                            <div className="col-lg-4">
-                                <button className="btn btn-outline-danger w-100" type="button" onClick={handleToggleWishlist}>
-                                    {isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+
+                                <div className="mt-3">
+                                    <span className={`badge px-2.5 py-1.5 rounded-2 fw-semibold ${getEnrollmentStatusBadgeClass(selectedEnrollment?.status)}`}>
+                                        {getEnrollmentStatusLabel(selectedEnrollment?.status || 'LEARNING')}
+                                    </span>
+                                </div>
+
+                                <button className="btn btn-outline-danger btn-sm py-1.5 rounded-3 fw-semibold w-100 mt-3" type="button" onClick={handleToggleWishlist}>
+                                    {isWishlisted ? 'Remove wishlist' : 'Add to wishlist'}
                                 </button>
                             </div>
-                        </div>
-                        <div className="progress mt-3">
-                            <div className="progress-bar" style={{ width: `${selectedEnrollment?.progress || 0}%` }}>
-                                {selectedEnrollment?.progress || 0}%
-                            </div>
-                        </div>
-                    </section>
 
-                    {detailLoading ? (
-                        <div className="alert alert-info">Loading course details...</div>
-                    ) : (
-                        <div className="row gy-4">
-                            <div className="col-lg-4">
-                                <div className="card p-4 mb-4">
-                                    <h4>Curriculum</h4>
-                                    {chapters.length === 0 ? (
-                                        <p className="text-muted">No chapter is available.</p>
-                                    ) : (
-                                        chapters.map((chapter) => (
-                                            <div key={chapter._id} className="mb-3">
-                                                <h6 className="mb-2">{chapter.title}</h6>
-                                                <div className="list-group">
+                            {/* Sticky Curriculum Syllabus details */}
+                            <div className="card border-0 shadow-sm rounded-4 p-3.5">
+                                <h5 className="fw-bold text-dark mb-3">Curriculum</h5>
+                                {chapters.length === 0 ? (
+                                    <p className="text-muted mb-0 small">No chapters available.</p>
+                                ) : (
+                                    <div className="d-flex flex-column gap-3">
+                                        {chapters.map((chapter) => (
+                                            <div key={chapter._id} className="pb-1">
+                                                <h6 className="fw-bold text-dark mb-2 small text-uppercase text-truncate" style={{ letterSpacing: '0.04em', fontSize: '0.75rem' }} title={chapter.title}>
+                                                    {chapter.title}
+                                                </h6>
+                                                <div className="d-flex flex-column gap-1.5">
                                                     {(lessonsByChapter[chapter._id] || []).map((lesson) => (
                                                         <button
                                                             type="button"
                                                             key={lesson._id}
-                                                            className={`list-group-item list-group-item-action ${activeLesson?._id === lesson._id ? 'active' : ''}`}
+                                                            className={`btn btn-sm text-start px-3 py-2 rounded-3 border-0 text-truncate transition-all ${activeLesson?._id === lesson._id ? 'btn-primary shadow-sm' : 'text-muted bg-transparent hover-bg-light'}`}
+                                                            style={{ fontSize: '0.8rem' }}
                                                             onClick={() => setActiveLesson(lesson)}
+                                                            title={lesson.title}
                                                         >
                                                             {lesson.title}
                                                         </button>
                                                     ))}
                                                 </div>
                                             </div>
-                                        ))
-                                    )}
-                                </div>
-
-                                <div className="card p-4">
-                                    <h4>Certificates</h4>
-                                    {certificates.length === 0 ? (
-                                        <p className="text-muted">No certificate has been issued yet.</p>
-                                    ) : (
-                                        pagedCertificates.items.map((certificate) => (
-                                            <div key={certificate._id} className="border-bottom py-2">
-                                                <div className="fw-semibold">{certificate.course?.title}</div>
-                                                <small className="text-muted">{certificate.certificateCode}</small>
-                                                <div>
-                                                    <a href={getCertificatePdfUrl(certificate.certificateCode)} target="_blank" rel="noreferrer">
-                                                        Download PDF
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                    {certificates.length > 0 && <PaginationControls pagination={pagedCertificates.pagination} onPageChange={(page) => setPage('certificates', page)} itemLabel="certificates" />}
-                                </div>
-                            </div>
-
-                            <div className="col-lg-8">
-                                <div className="card p-4 mb-4">
-                                    <div className="d-flex flex-wrap justify-content-between gap-3">
-                                        <div>
-                                            <h3 className="mb-1">{activeLesson?.title || selectedCourseTitle}</h3>
-                                            <p className="text-muted mb-0">{activeLesson?.description}</p>
-                                        </div>
-                                        <span className="badge text-bg-light align-self-start">{activeLesson?.contentType || 'LESSON'}</span>
-                                    </div>
-                                    <div className="my-3">{renderLessonContent()}</div>
-                                    <div className="row gy-3 align-items-end">
-                                        <div className="col-md-8">
-                                            <label className="form-label" htmlFor="watched-percent">Watched percent</label>
-                                            <input
-                                                id="watched-percent"
-                                                className="form-range"
-                                                type="range"
-                                                min="0"
-                                                max="100"
-                                                value={watchedPercent}
-                                                onChange={(event) => setWatchedPercent(event.target.value)}
-                                            />
-                                            <small>{watchedPercent}% watched</small>
-                                        </div>
-                                        <div className="col-md-4">
-                                            <button className="btn btn-primary w-100" type="button" onClick={handleCompleteLesson} disabled={!activeLesson}>
-                                                Mark complete
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="card p-4 mb-4">
-                                    <h4>Quizzes</h4>
-                                    {quizzes.length === 0 ? (
-                                        <p className="text-muted">No quiz is available for this course yet.</p>
-                                    ) : (
-                                        pagedQuizzes.items.map((quiz) => (
-                                            <div key={quiz._id} className="border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
-                                                <div>
-                                                    <h6 className="mb-1">{quiz.title}</h6>
-                                                    <p className="text-muted mb-0">{quiz.description || 'Complete this quiz as part of your learning journey.'}</p>
-                                                    <small className="text-muted">
-                                                        {quiz.durationMinutes || quiz.timeLimitSeconds ? `Time limit: ${quiz.timeLimitSeconds ? `${quiz.timeLimitSeconds}s` : `${quiz.durationMinutes} minutes`}` : 'No time limit'}
-                                                    </small>
-                                                </div>
-                                                <Link className="btn btn-primary" to={`/quizzes/${quiz._id}`}>
-                                                    Take quiz
-                                                </Link>
-                                            </div>
-                                        ))
-                                    )}
-                                    {quizzes.length > 0 && <PaginationControls pagination={pagedQuizzes.pagination} onPageChange={(page) => setPage('quizzes', page)} itemLabel="quizzes" />}
-                                </div>
-
-                                <div className="card p-4 mb-4">
-                                    <h4>Assignments</h4>
-                                    {assignments.length === 0 ? (
-                                        <p className="text-muted">No assignment is available for this course.</p>
-                                    ) : (
-                                        pagedAssignments.items.map((assignment) => {
-                                            const formValue = submissionForm[assignment._id] || {};
-                                            const submission = assignment.mySubmission;
-                                            const isCompleted = submission?.status === 'GRADED';
-                                            const isSubmitted = Boolean(submission);
-                                            return (
-                                                <div key={assignment._id} className="border-bottom py-3">
-                                                    <div className="d-flex justify-content-between gap-3">
-                                                        <div>
-                                                            <h6>{assignment.title}</h6>
-                                                            <p className="text-muted mb-2">{assignment.description}</p>
-                                                            {submission && (
-                                                                <div className="d-flex flex-wrap gap-2 mb-2">
-                                                                    <span className={`badge ${isCompleted ? 'text-bg-success' : 'text-bg-warning'}`}>
-                                                                        {isCompleted ? 'Completed' : 'Waiting teacher grade'}
-                                                                    </span>
-                                                                    {isCompleted && <span className="badge text-bg-light">Score: {submission.score ?? 0}/{assignment.maxScore}</span>}
-                                                                    {submission.feedback && <span className="text-muted small">Feedback: {submission.feedback}</span>}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <span className="badge text-bg-light">{assignment.maxScore} pts</span>
-                                                    </div>
-                                                    <textarea
-                                                        className="form-control mb-2"
-                                                        rows="3"
-                                                        placeholder="Submission content"
-                                                        value={formValue.content || ''}
-                                                        onChange={(event) => setSubmissionForm((current) => ({
-                                                            ...current,
-                                                            [assignment._id]: { ...formValue, content: event.target.value }
-                                                        }))}
-                                                    />
-                                                    <input
-                                                        className="form-control mb-2"
-                                                        placeholder="File URL"
-                                                        value={formValue.fileUrl || ''}
-                                                        onChange={(event) => setSubmissionForm((current) => ({
-                                                            ...current,
-                                                            [assignment._id]: { ...formValue, fileUrl: event.target.value }
-                                                        }))}
-                                                    />
-                                                    <button className="btn btn-outline-primary" type="button" onClick={() => handleAssignmentSubmit(assignment._id)} disabled={isCompleted || (!formValue.content && !formValue.fileUrl)}>
-                                                        {isCompleted ? 'Completed' : isSubmitted ? 'Resubmit before grading' : 'Submit assignment'}
-                                                    </button>
-                                                </div>
-                                            );
-                                        })
-                                    )}
-                                    {assignments.length > 0 && <PaginationControls pagination={pagedAssignments.pagination} onPageChange={(page) => setPage('assignments', page)} itemLabel="assignments" />}
-                                </div>
-
-                                <div className="card p-4 mb-4">
-                                    <h4>Course review</h4>
-                                    <form className="row gy-3" onSubmit={handleReviewSubmit}>
-                                        <div className="col-md-3">
-                                            <label className="form-label" htmlFor="review-rating">Rating</label>
-                                            <select
-                                                id="review-rating"
-                                                className="form-select"
-                                                value={reviewForm.rating}
-                                                onChange={(event) => setReviewForm((current) => ({ ...current, rating: event.target.value }))}
-                                            >
-                                                {[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating}</option>)}
-                                            </select>
-                                        </div>
-                                        <div className="col-md-9">
-                                            <label className="form-label" htmlFor="review-content">Content</label>
-                                            <input
-                                                id="review-content"
-                                                className="form-control"
-                                                value={reviewForm.content}
-                                                onChange={(event) => setReviewForm((current) => ({ ...current, content: event.target.value }))}
-                                            />
-                                        </div>
-                                        <div className="col-12">
-                                            <button className="btn btn-primary" type="submit">Save review</button>
-                                        </div>
-                                    </form>
-                                    <div className="mt-3">
-                                        {pagedReviews.items.map((review) => (
-                                            <div key={review._id} className="border-top py-2">
-                                                <strong>{review.rating}/5</strong> {review.content}
-                                            </div>
                                         ))}
-                                        {reviews.length > 0 && <PaginationControls pagination={pagedReviews.pagination} onPageChange={(page) => setPage('reviews', page)} itemLabel="reviews" />}
                                     </div>
-                                </div>
-
-                                <div className="card p-4 mb-4">
-                                    <h4>Class discussion</h4>
-                                    {classId ? (
-                                        <>
-                                            <form className="row gy-3" onSubmit={handleCommentSubmit}>
-                                                <div className="col-md-4">
-                                                    <input
-                                                        className="form-control"
-                                                        placeholder="Title"
-                                                        value={commentForm.title}
-                                                        onChange={(event) => setCommentForm((current) => ({ ...current, title: event.target.value }))}
-                                                    />
-                                                </div>
-                                                <div className="col-md-8">
-                                                    <input
-                                                        className="form-control"
-                                                        placeholder="Comment"
-                                                        value={commentForm.content}
-                                                        onChange={(event) => setCommentForm((current) => ({ ...current, content: event.target.value }))}
-                                                        required
-                                                    />
-                                                </div>
-                                                <div className="col-12">
-                                                    <button className="btn btn-primary" type="submit">Post comment</button>
-                                                </div>
-                                            </form>
-                                            <div className="mt-3">
-                                                {comments.length === 0 ? (
-                                                    <p className="text-muted">No discussion yet.</p>
-                                                ) : pagedComments.items.map((comment) => (
-                                                    <div key={comment._id} className="border-top py-2">
-                                                        <div className="fw-semibold">{comment.title || 'Discussion'}</div>
-                                                        <div>{comment.content}</div>
-                                                        <small className="text-muted">{comment.author?.fullName || 'Member'}</small>
-                                                    </div>
-                                                ))}
-                                                {comments.length > 0 && <PaginationControls pagination={pagedComments.pagination} onPageChange={(page) => setPage('comments', page)} itemLabel="comments" />}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <p className="text-muted">You need to be assigned to a class before joining discussion.</p>
-                                    )}
-                                </div>
-
-                                <div className="card p-4">
-                                    <h4>Attendance history</h4>
-                                    {attendance.length === 0 ? (
-                                        <p className="text-muted">No attendance record yet.</p>
-                                    ) : (
-                                        <div className="table-responsive">
-                                            <table className="table align-middle">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Class</th>
-                                                        <th>Lesson</th>
-                                                        <th>Watched</th>
-                                                        <th>Status</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {pagedAttendance.items.map((item) => (
-                                                        <tr key={item._id}>
-                                                            <td>{item.class?.code || '-'}</td>
-                                                            <td>{item.lesson?.title || '-'}</td>
-                                                            <td>{item.watchedPercent || 0}%</td>
-                                                            <td>{item.attended ? 'Attended' : 'Missing'}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-                                    {attendance.length > 0 && <PaginationControls pagination={pagedAttendance.pagination} onPageChange={(page) => setPage('attendance', page)} itemLabel="attendance records" />}
-                                </div>
+                                )}
                             </div>
                         </div>
-                    )}
-                </>
+                    </aside>
+
+                    {/* RIGHT COLUMN: Main learning area (70-75% width) */}
+                    <main className="col-lg-8 col-xl-9">
+                        {detailLoading ? (
+                            <div className="alert alert-info py-3 text-center rounded-3">Loading course details...</div>
+                        ) : (
+                            <div className="d-flex flex-column gap-4">
+                                {/* 3. Main Player & Lesson Block */}
+                                <div className="card border-0 shadow-sm rounded-4 p-4">
+                                    {/* Lesson Header */}
+                                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                                        <div>
+                                            <h3 className="fw-bold text-dark mb-1 fs-4">{activeLesson?.title || selectedCourseTitle}</h3>
+                                            <p className="text-muted mb-0 small">{activeLesson?.description}</p>
+                                        </div>
+                                        <span className="badge bg-secondary-subtle text-secondary rounded-2 px-2.5 py-1.5 font-monospace fw-bold">{activeLesson?.contentType || 'LESSON'}</span>
+                                    </div>
+
+                                    {/* Lesson Content Player */}
+                                    <div
+                                        className={`my-3 overflow-hidden rounded-4 d-flex align-items-center justify-content-center ${activeLessonIsDocument ? 'bg-light border p-2' : 'bg-black'}`}
+                                        style={{ minHeight: activeLessonIsDocument ? '56px' : '320px' }}
+                                    >
+                                        {renderLessonContent()}
+                                    </div>
+
+                                </div>
+
+                                {/* 4. Tabbed interface block */}
+                                <div className="card border-0 shadow-sm rounded-4 p-4">
+                                    <ul className="nav nav-tabs gap-2 mb-4 border-bottom" id="learningTab" role="tablist">
+                                        {[
+                                            ['quizzes', 'Quizzes'],
+                                            ['assignments', 'Assignments'],
+                                            ['discussions', 'Discussions'],
+                                            ['reviews', 'Reviews'],
+                                            ['attendance', 'Attendance']
+                                        ].map(([tabKey, tabLabel]) => (
+                                            <li className="nav-item" key={tabKey} role="presentation">
+                                                <button
+                                                    className={`nav-link fw-semibold rounded-top-3 border-0 px-3.5 py-2.5 transition-all ${activeWorkspaceTab === tabKey ? 'active bg-primary text-white shadow-sm' : 'text-muted bg-transparent'}`}
+                                                    id={`${tabKey}-tab`}
+                                                    type="button"
+                                                    role="tab"
+                                                    onClick={() => setActiveWorkspaceTab(tabKey)}
+                                                >
+                                                    {tabLabel}
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+
+                                    <div className="tab-content" id="learningTabContent">
+                                        {/* TAB: Quizzes */}
+                                        {activeWorkspaceTab === 'quizzes' && (
+                                            <div className="tab-pane fade show active" role="tabpanel">
+                                                <h5 className="fw-bold text-dark mb-3">Quizzes</h5>
+                                                {quizzes.length === 0 ? (
+                                                    <p className="text-muted mb-0 small">No quizzes are available for this course yet.</p>
+                                                ) : (
+                                                    <div className="d-flex flex-column gap-3">
+                                                        {pagedQuizzes.items.map((quiz) => (
+                                                            <div key={quiz._id} className="p-3 border rounded-3 bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                                                                <div className="min-w-0">
+                                                                    <h6 className="fw-bold text-dark mb-1">{quiz.title}</h6>
+                                                                    <p className="text-muted mb-2 small">{quiz.description || 'Complete this quiz as part of your learning journey.'}</p>
+                                                                    <div className="d-flex flex-wrap align-items-center gap-2">
+                                                                        <small className="badge bg-light text-secondary rounded-2 px-2.5 py-1 fw-bold">
+                                                                            {quiz.durationMinutes || quiz.timeLimitSeconds ? `Time limit: ${quiz.timeLimitSeconds ? `${quiz.timeLimitSeconds}s` : `${quiz.durationMinutes} minutes`}` : 'No time limit'}
+                                                                        </small>
+                                                                        {quiz.latestResult ? (
+                                                                            <>
+                                                                                <small className="badge bg-primary-subtle text-primary rounded-2 px-2.5 py-1 fw-bold">Score: {quiz.latestResult.score}/100</small>
+                                                                                <small className={`badge rounded-2 px-2.5 py-1 fw-bold ${quiz.latestResult.passed ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}`}>
+                                                                                    {quiz.latestResult.passed ? 'Passed' : 'Failed'}
+                                                                                </small>
+                                                                                <small className="text-muted">
+                                                                                    Attempt #{quiz.latestResult.attemptNumber}
+                                                                                    {quiz.latestResult.submittedAt ? ` - ${new Date(quiz.latestResult.submittedAt).toLocaleString()}` : ''}
+                                                                                </small>
+                                                                            </>
+                                                                        ) : (
+                                                                            <small className="badge bg-warning-subtle text-warning-emphasis rounded-2 px-2.5 py-1 fw-bold">Not submitted</small>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <Link className="btn btn-primary px-3 py-1.5 rounded-2 fw-semibold btn-sm flex-shrink-0" to={`/quizzes/${quiz._id}`}>
+                                                                    {quiz.latestResult ? 'Retake quiz' : 'Take quiz'}
+                                                                </Link>
+                                                            </div>
+                                                        ))}
+                                                        <PaginationControls pagination={pagedQuizzes.pagination} onPageChange={(page) => setPage('quizzes', page)} itemLabel="quizzes" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* TAB: Assignments */}
+                                        {activeWorkspaceTab === 'assignments' && (
+                                            <div className="tab-pane fade show active" role="tabpanel">
+                                                <h5 className="fw-bold text-dark mb-3">Assignments</h5>
+                                                {assignments.length === 0 ? (
+                                                    <p className="text-muted mb-0 small">No assignments are available for this course.</p>
+                                                ) : (
+                                                    <div className="d-flex flex-column gap-3">
+                                                        {pagedAssignments.items.map((assignment) => {
+                                                            const formValue = submissionForm[assignment._id] || {};
+                                                            const submission = assignment.mySubmission;
+                                                            const isCompleted = submission?.status === 'GRADED';
+                                                            const isSubmitted = Boolean(submission);
+                                                            return (
+                                                                <div key={assignment._id} className="p-3 border rounded-3 bg-white">
+                                                                    <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
+                                                                        <div>
+                                                                            <h6 className="fw-bold text-dark mb-1">{assignment.title}</h6>
+                                                                            <p className="text-muted small mb-2">{assignment.description}</p>
+                                                                        </div>
+                                                                        <span className="badge bg-primary-subtle text-primary rounded-2 px-2 py-1">{assignment.maxScore} pts</span>
+                                                                    </div>
+                                                                    {submission && (
+                                                                        <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+                                                                            <span className={`badge px-2.5 py-1.5 rounded-2 fw-bold ${isCompleted ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'}`}>
+                                                                                {isCompleted ? 'Completed' : 'Waiting teacher grade'}
+                                                                            </span>
+                                                                            {isCompleted && <span className="badge text-bg-light border px-2.5 py-1.5 rounded-2 fw-bold">Score: {submission.score ?? 0}/{assignment.maxScore}</span>}
+                                                                            {submission.feedback && <span className="text-muted small ms-1">Feedback: {submission.feedback}</span>}
+                                                                        </div>
+                                                                    )}
+                                                                    <textarea
+                                                                        className="form-control mb-2 rounded-3 bg-light border-0 py-2.5 px-3 small"
+                                                                        rows="3"
+                                                                        placeholder="Submission content details..."
+                                                                        value={formValue.content || ''}
+                                                                        onChange={(event) => setSubmissionForm((current) => ({
+                                                                            ...current,
+                                                                            [assignment._id]: { ...formValue, content: event.target.value }
+                                                                        }))}
+                                                                    />
+                                                                    <input
+                                                                        className="form-control mb-3 rounded-3 bg-light border-0 py-2 px-3 small"
+                                                                        placeholder="Attached file link URL"
+                                                                        value={formValue.fileUrl || ''}
+                                                                        onChange={(event) => setSubmissionForm((current) => ({
+                                                                            ...current,
+                                                                            [assignment._id]: { ...formValue, fileUrl: event.target.value }
+                                                                        }))}
+                                                                    />
+                                                                    <button className="btn btn-outline-primary px-3 py-1.5 rounded-3 btn-sm fw-bold" type="button" onClick={() => handleAssignmentSubmit(assignment._id)} disabled={isCompleted || (!formValue.content && !formValue.fileUrl)}>
+                                                                        {isCompleted ? 'Completed' : isSubmitted ? 'Resubmit before grading' : 'Submit assignment'}
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        <PaginationControls pagination={pagedAssignments.pagination} onPageChange={(page) => setPage('assignments', page)} itemLabel="assignments" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* TAB: Discussions */}
+                                        {activeWorkspaceTab === 'discussions' && (
+                                            <div className="tab-pane fade show active" role="tabpanel">
+                                                <h5 className="fw-bold text-dark mb-3">Class discussion</h5>
+                                                {classId ? (
+                                                    <>
+                                                        <form className="row g-3 mb-4 p-3 bg-light rounded-4 border" onSubmit={handleCommentSubmit}>
+                                                            <div className="col-md-4">
+                                                                <label className="form-label small fw-semibold text-dark">Discussion Title</label>
+                                                                <input
+                                                                    className="form-control bg-white py-2 rounded-3"
+                                                                    placeholder="Title"
+                                                                    value={commentForm.title}
+                                                                    onChange={(event) => setCommentForm((current) => ({ ...current, title: event.target.value }))}
+                                                                />
+                                                            </div>
+                                                            <div className="col-md-8">
+                                                                <label className="form-label small fw-semibold text-dark">Your Comment</label>
+                                                                <input
+                                                                    className="form-control bg-white py-2 rounded-3"
+                                                                    placeholder="Post a query or greeting..."
+                                                                    value={commentForm.content}
+                                                                    onChange={(event) => setCommentForm((current) => ({ ...current, content: event.target.value }))}
+                                                                    required
+                                                                />
+                                                            </div>
+                                                            <div className="col-12 mt-3 text-end">
+                                                                <button className="btn btn-primary px-4 py-2 rounded-3 fw-bold auth-primary-btn" type="submit">Post comment</button>
+                                                            </div>
+                                                        </form>
+
+                                                        <div className="d-flex flex-column gap-3">
+                                                            {comments.length === 0 ? (
+                                                                <p className="text-muted small mb-0">No discussion yet.</p>
+                                                            ) : pagedComments.items.map((comment) => (
+                                                                <div key={comment._id} className="p-3 border rounded-3 bg-white">
+                                                                    <div className="fw-bold text-dark mb-1">{comment.title || 'Discussion'}</div>
+                                                                    <div className="text-muted small mb-2">{comment.content}</div>
+                                                                    <small className="badge text-bg-light px-2.5 py-1.5 rounded-2 fw-semibold">{comment.author?.fullName || 'Member'}</small>
+                                                                </div>
+                                                            ))}
+                                                            {comments.length > 0 && <PaginationControls pagination={pagedComments.pagination} onPageChange={(page) => setPage('comments', page)} itemLabel="comments" />}
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <p className="text-muted mb-0 small">You need to be assigned to a class before joining discussion.</p>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* TAB: Reviews */}
+                                        {activeWorkspaceTab === 'reviews' && (
+                                            <div className="tab-pane fade show active" role="tabpanel">
+                                                <h5 className="fw-bold text-dark mb-3">Course review</h5>
+                                                {selectedEnrollment?.status === 'COMPLETED' ? (
+                                                    <form className="row g-3 mb-4 p-3 bg-light rounded-4 border" onSubmit={handleReviewSubmit}>
+                                                        <div className="col-md-3">
+                                                            <label className="form-label small fw-semibold text-dark" htmlFor="review-rating">Rating</label>
+                                                            <select
+                                                                id="review-rating"
+                                                                className="form-select bg-white rounded-3 py-2"
+                                                                value={reviewForm.rating}
+                                                                onChange={(event) => setReviewForm((current) => ({ ...current, rating: event.target.value }))}
+                                                            >
+                                                                {[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} Stars</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="col-md-9">
+                                                            <label className="form-label small fw-semibold text-dark" htmlFor="review-content">Your Review</label>
+                                                            <input
+                                                                id="review-content"
+                                                                className="form-control bg-white rounded-3 py-2"
+                                                                placeholder="Tell us what you think of this course..."
+                                                                value={reviewForm.content}
+                                                                onChange={(event) => setReviewForm((current) => ({ ...current, content: event.target.value }))}
+                                                            />
+                                                        </div>
+                                                        <div className="col-12 mt-3 text-end">
+                                                            <button className="btn btn-primary px-4 py-2 rounded-3 fw-bold auth-primary-btn" type="submit">Save review</button>
+                                                        </div>
+                                                    </form>
+                                                ) : (
+                                                    <div className="alert alert-info py-2.5 small mb-4">
+                                                        You can review this course after your teacher approves course completion.
+                                                    </div>
+                                                )}
+
+                                                <div className="d-flex flex-column gap-2.5">
+                                                    {pagedReviews.items.map((review) => (
+                                                        <div key={review._id} className="p-3 border rounded-3 bg-white d-flex align-items-start gap-2.5">
+                                                            <span className="badge bg-warning text-dark fw-bold rounded-2 px-2 py-1 flex-shrink-0" style={{ fontSize: '0.8rem' }}>★ {review.rating}</span>
+                                                            <span className="text-muted small">{review.content}</span>
+                                                        </div>
+                                                    ))}
+                                                    {reviews.length > 0 && <PaginationControls pagination={pagedReviews.pagination} onPageChange={(page) => setPage('reviews', page)} itemLabel="reviews" />}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* TAB: Attendance */}
+                                        {activeWorkspaceTab === 'attendance' && (
+                                            <div className="tab-pane fade show active" role="tabpanel">
+                                                <h5 className="fw-bold text-dark mb-3">Attendance history</h5>
+                                                {attendance.length === 0 ? (
+                                                    <p className="text-muted mb-0 small">No attendance record yet.</p>
+                                                ) : (
+                                                    <div className="table-responsive rounded-3 border mb-2 bg-white">
+                                                        <table className="table table-hover align-middle mb-0">
+                                                            <thead className="table-light">
+                                                                <tr>
+                                                                    <th className="ps-3">Class</th>
+                                                                    <th>Date</th>
+                                                                    <th>Lesson</th>
+                                                                    <th className="pe-3">Status</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {pagedAttendance.items.map((item) => (
+                                                                    <tr key={item._id}>
+                                                                        <td className="ps-3"><span className="badge bg-secondary-subtle text-secondary font-monospace fw-bold">{item.class?.code || '-'}</span></td>
+                                                                        <td className="text-muted small">{formatAttendanceDate(item)}</td>
+                                                                        <td>{item.lesson?.title || '-'}</td>
+                                                                        <td className="pe-3"><span className={`badge px-2.5 py-1.5 rounded-2 ${item.attended ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}`}>{item.attended ? 'Attended' : 'Missing'}</span></td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
+                                                {attendance.length > 0 && <PaginationControls pagination={pagedAttendance.pagination} onPageChange={(page) => setPage('attendance', page)} itemLabel="attendance records" />}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* 5. Certificates Card placed below tab content */}
+                                <div className="card border-0 shadow-sm rounded-4 p-4">
+                                    <h4 className="fw-bold text-dark mb-3 fs-5">Certificates</h4>
+                                    {certificates.length === 0 ? (
+                                        <p className="text-muted mb-0 small">No certificates have been issued yet.</p>
+                                    ) : (
+                                        <div className="d-flex flex-column gap-3">
+                                            {pagedCertificates.items.map((certificate) => (
+                                                <div key={certificate._id} className="p-3 bg-light rounded-3 border d-flex justify-content-between align-items-center gap-2">
+                                                    <div className="overflow-hidden">
+                                                        <div className="fw-semibold text-dark text-truncate small">{certificate.course?.title}</div>
+                                                        <small className="text-muted font-monospace">{certificate.certificateCode}</small>
+                                                    </div>
+                                                    <a className="btn btn-sm btn-outline-primary fw-bold px-2.5 rounded-2 flex-shrink-0" href={getCertificatePdfUrl(certificate.certificateCode)} target="_blank" rel="noreferrer">
+                                                        PDF
+                                                    </a>
+                                                </div>
+                                            ))}
+                                            <PaginationControls pagination={pagedCertificates.pagination} onPageChange={(page) => setPage('certificates', page)} itemLabel="certificates" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
             )}
         </div>
     );

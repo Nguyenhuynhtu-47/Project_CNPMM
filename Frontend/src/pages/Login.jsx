@@ -7,10 +7,18 @@ import * as yup from 'yup';
 import { login } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
 import { setCredentials } from '../store/authSlice';
+import PasswordVisibilityIcon from '../components/PasswordVisibilityIcon';
 
 const loginSchema = yup.object({
-    email: yup.string().email('Email is invalid').required('Email is required'),
-    password: yup.string().min(6, 'Password must be at least 6 characters').required('Password is required')
+    email: yup
+        .string()
+        .email('Please enter a valid email address')
+        .required('Email is required'),
+
+    password: yup
+        .string()
+        .min(6, 'Password must be at least 6 characters')
+        .required('Password is required')
 });
 
 const loginErrorMessages = {
@@ -62,28 +70,49 @@ const Login = () => {
     };
 
     return (
-        <section className="auth-card-grid">
+        <section className="auth-card-grid login-page">
             <div className="auth-copy-panel auth-copy-panel--login">
-                <span className="eyebrow">Welcome back</span>
-                <h1>Sign in to access your courses and learning dashboard.</h1>
-                <p>The system will take you to the home page after a successful login.</p>
-                <div className="feature-stack">
-                    <div>
-                        <strong>Login first</strong>
-                        <span>Do not have an account yet? Register to get started.</span>
+                <div className="login-copy-content">
+                    <span className="eyebrow">English Course Hub</span>
+                    <h1>Master English with a smarter learning journey.</h1>
+                    <p>
+                        Join interactive classes, follow teacher-guided lessons, and manage your English learning workspace.
+                    </p>
+
+                    <div className="learning-visual" aria-hidden="true">
+                        <div className="learning-visual__card learning-visual__card--primary">
+                            <span>Speaking class</span>
+                            <strong>Live</strong>
+                            <small>Teacher guided</small>
+                        </div>
+                        <div className="learning-visual__book">
+                            <span>EN</span>
+                            <div>
+                                <strong>Vocabulary</strong>
+                                <small>32 new words</small>
+                            </div>
+                        </div>
+                        <div className="learning-visual__bubble">A+</div>
                     </div>
-                    <div>
-                        <strong>Protected home</strong>
-                        <span>Sign in before opening your dashboard.</span>
+
+                    <div className="feature-stack login-feature-stack">
+                        <div>
+                            <strong>Personalized learning</strong>
+                            <span>Follow courses, quizzes, and lessons matched to your English goals.</span>
+                        </div>
+                        <div>
+                            <strong>Course management</strong>
+                            <span>Access your dashboard, enrollments, and class materials after signing in.</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div className="auth-form-panel">
-                <div className="auth-form-card">
+                <div className="auth-form-card login-form-card">
                     <span className="eyebrow">Login</span>
-                    <h2>Login</h2>
-                    <p className="auth-helper">Enter your email and password to continue.</p>
+                    <h2>Welcome Back</h2>
+                    <p className="auth-helper">Sign in to continue your English learning experience.</p>
 
                     {error ? <div className="alert alert-danger py-2">{error}</div> : null}
 
@@ -94,7 +123,7 @@ const Login = () => {
                                 type="email"
                                 className="form-control form-control-lg"
                                 {...register('email')}
-                                placeholder="you@example.com"
+                                placeholder="student@example.com"
                             />
                             {errors.email ? <span className="text-danger small">{errors.email.message}</span> : null}
                         </label>
@@ -106,7 +135,7 @@ const Login = () => {
                                     type={showPassword ? 'text' : 'password'}
                                     className="form-control form-control-lg"
                                     {...register('password')}
-                                    placeholder="Enter password"
+                                    placeholder="Enter your password"
                                 />
                                 <button
                                     type="button"
@@ -114,20 +143,28 @@ const Login = () => {
                                     onClick={() => setShowPassword((value) => !value)}
                                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                                 >
-                                    {showPassword ? 'Hide' : 'Show'}
+                                    <PasswordVisibilityIcon visible={showPassword} />
                                 </button>
                             </div>
                             {errors.password ? <span className="text-danger small">{errors.password.message}</span> : null}
                         </label>
+
+                        <div className="login-options">
+                            <label className="remember-option">
+                                <input type="checkbox" />
+                                <span>Remember me</span>
+                            </label>
+                            <Link to="/forgot-password">Forgot password?</Link>
+                        </div>
 
                         <button type="submit" className="btn btn-primary btn-lg w-100 auth-primary-btn" disabled={loading}>
                             {loading ? 'Signing in...' : 'Login'}
                         </button>
                     </form>
 
-                    <div className="auth-links">
-                        <Link to="/forgot-password">Forgot password?</Link>
-                        <Link to="/register">New here? Register</Link>
+                    <div className="auth-links login-signup-link">
+                        <span>Don&apos;t have an account?</span>
+                        <Link to="/register">Sign up</Link>
                     </div>
                 </div>
             </div>

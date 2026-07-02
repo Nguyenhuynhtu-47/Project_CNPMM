@@ -12,7 +12,7 @@ const registerLimiter = rateLimit({
 
 const loginLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
-    max: 5,
+    max: 20,
     message: {
         message:
             'Quá nhiều lần đăng nhập, vui lòng thử lại sau 10 phút.'

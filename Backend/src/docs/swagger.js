@@ -124,8 +124,7 @@ const options = {
             user: { oneOf: [{ type: 'string' }, { $ref: '#/components/schemas/User' }] },
             course: { oneOf: [{ type: 'string' }, { $ref: '#/components/schemas/Course' }] },
             class: { oneOf: [{ type: 'string' }, { $ref: '#/components/schemas/Class' }] },
-            status: { type: 'string', enum: ['WAITING_CLASS', 'ASSIGNED_CLASS', 'LEARNING', 'COMPLETED', 'CANCELLED'] },
-            progress: { type: 'number' }
+            status: { type: 'string', enum: ['WAITING_CLASS', 'ASSIGNED_CLASS', 'LEARNING', 'COMPLETED', 'CANCELLED'] }
           }
         },
         Order: {
@@ -382,9 +381,9 @@ const options = {
         post: {
           tags: ['Lessons'],
           security: [{ bearerAuth: [] }],
-          summary: 'Mark lesson as completed',
+          summary: 'Record lesson learning activity',
           parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-          responses: { 200: { description: 'Lesson completed' } }
+          responses: { 200: { description: 'Lesson activity recorded' } }
         }
       },
       '/api/quizzes': {

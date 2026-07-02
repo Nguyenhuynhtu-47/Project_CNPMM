@@ -8,6 +8,9 @@ const enrollInCourse = async (req, res) => {
     if (error.message === 'COURSE_NOT_FOUND') {
       return res.status(404).json({ message: 'Course not found' });
     }
+    if (error.message === 'COURSE_ALREADY_ENROLLED') {
+      return res.status(409).json({ message: 'You are already learning this course.' });
+    }
     console.error(error);
     return res.status(500).json({ message: 'Cannot enroll in course' });
   }
@@ -44,13 +47,25 @@ const getEnrollmentById = async (req, res) => {
   }
 };
 
-const updateEnrollmentProgress = async (req, res) => {
+const startLearning = async (req, res) => {
   try {
-    const updatedEnrollment = await enrollmentService.updateEnrollmentProgress(req.params.id, req.body.progress);
-    return res.status(200).json({ message: 'Progress updated', enrollment: updatedEnrollment });
+    const enrollment = await enrollmentService.startLearning({
+      enrollmentId: req.params.id,
+      userId: req.user._id
+    });
+    return res.status(200).json({ message: 'Learning started', enrollment });
   } catch (error) {
+    if (error.message === 'ENROLLMENT_NOT_FOUND') {
+      return res.status(404).json({ message: 'Enrollment not found' });
+    }
+    if (error.message === 'ENROLLMENT_FORBIDDEN') {
+      return res.status(403).json({ message: 'You cannot start this enrollment' });
+    }
+    if (error.message === 'CLASS_NOT_ASSIGNED') {
+      return res.status(400).json({ message: 'Class must be assigned before learning starts' });
+    }
     console.error(error);
-    return res.status(500).json({ message: 'Cannot update progress' });
+    return res.status(500).json({ message: 'Cannot start learning' });
   }
 };
 
@@ -59,5 +74,6 @@ module.exports = {
   getAllEnrollments,
   getUserEnrollments,
   getEnrollmentById,
-  updateEnrollmentProgress
+  startLearning
 };
+

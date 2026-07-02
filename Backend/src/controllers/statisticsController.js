@@ -26,7 +26,13 @@ const getOverview = async (req, res) => {
       ClassModel.countDocuments(commonDateMatch),
       Enrollment.aggregate([
         { $match: commonDateMatch },
-        { $group: { _id: null, avgCompletion: { $avg: '$progress' } } }
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            completed: { $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] } }
+          }
+        }
       ]),
       Order.aggregate([
         { $match: { status: 'PAID', ...orderDateMatch } },
@@ -71,7 +77,7 @@ const getOverview = async (req, res) => {
       registrations,
       classes,
       totalCourses,
-      completionRate: Math.round(completionAgg[0]?.avgCompletion || 0),
+      completionRate: completionAgg[0]?.total ? Math.round((completionAgg[0].completed / completionAgg[0].total) * 100) : 0,
       topCourses,
       topTeachers,
       statusBreakdown: {

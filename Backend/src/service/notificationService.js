@@ -33,8 +33,31 @@ const listForUser = async (userId, limit = 50, skip = 0) => {
   return Notification.find({ user: userId }).sort({ createdAt: -1 }).skip(skip).limit(limit);
 };
 
-const listAll = async (limit = 100, skip = 0) => {
-  return Notification.find({})
+const User = require('../models/User');
+
+const listAll = async (limit = 100, skip = 0, filters = {}) => {
+  const query = {};
+
+  if (filters.startDate || filters.endDate) {
+    query.createdAt = {};
+    if (filters.startDate) {
+      const start = new Date(filters.startDate);
+      start.setHours(0, 0, 0, 0);
+      query.createdAt.$gte = start;
+    }
+    if (filters.endDate) {
+      const end = new Date(filters.endDate);
+      end.setHours(23, 59, 59, 999);
+      query.createdAt.$lte = end;
+    }
+  }
+
+  if (filters.role) {
+    const users = await User.find({ role: filters.role }).select('_id');
+    query.user = { $in: users.map(u => u._id) };
+  }
+
+  return Notification.find(query)
     .populate('user', 'fullName email role')
     .sort({ createdAt: -1 })
     .skip(skip)
