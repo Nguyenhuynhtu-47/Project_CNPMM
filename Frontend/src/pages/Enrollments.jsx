@@ -33,14 +33,6 @@ const Enrollments = () => {
 
     return (
         <div className="container-fluid px-0 py-3">
-            {/* Header Block */}
-            <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4 p-4 bg-white rounded-4 border">
-                <div>
-                    <span className="badge bg-primary-subtle text-primary rounded-pill px-3 py-1.5 mb-2 text-uppercase fw-bold" style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>My Enrollments</span>
-                    <h2 className="fw-bold mb-1 text-dark">Track course and class assignments</h2>
-                    <p className="text-muted mb-0 small">Review the courses you enrolled in and class assignment status.</p>
-                </div>
-            </div>
 
             {error && <div className="alert alert-danger py-2.5 mb-4">{error}</div>}
 
