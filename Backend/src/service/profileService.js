@@ -1,14 +1,19 @@
 const User = require('../models/User');
 
 const updateProfile = async (userId, profileData) => {
+    const updateData = {
+        fullName: profileData.fullName,
+        phone: profileData.phone,
+        address: profileData.address
+    };
+
+    if (profileData.avatar) {
+        updateData.avatar = profileData.avatar;
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
         userId,
-        {
-            fullName: profileData.fullName,
-            phone: profileData.phone,
-            address: profileData.address,
-            avatar: profileData.avatar
-        },
+        updateData,
         { new: true }
     ).select('-password');
 

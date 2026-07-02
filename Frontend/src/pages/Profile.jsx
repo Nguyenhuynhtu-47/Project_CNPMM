@@ -97,7 +97,16 @@ const Profile = () => {
         setLoading(true);
 
         try {
-            const response = await updateProfile(formData);
+            const payload = new FormData();
+            payload.append('fullName', formData.fullName);
+            payload.append('phone', formData.phone);
+            payload.append('address', formData.address);
+
+            if (avatarFile) {
+                payload.append('avatar', avatarFile);
+            }
+
+            const response = await updateProfile(payload);
             if (response.data?.data) {
                 const updatedProfile = response.data.data;
                 updateUser(updatedProfile);
@@ -112,6 +121,9 @@ const Profile = () => {
             setLoading(false);
         }
     };
+
+    const displayAvatar = avatarPreview || user?.avatar || '';
+    const displayName = formData.fullName || user?.fullName || user?.email || 'My account';
 
     return (
         <div className="container mx-auto px-4 py-6 max-w-5xl">
